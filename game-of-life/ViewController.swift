@@ -36,16 +36,6 @@ class ViewController: UIViewController {
     private lazy var fill = FillKernel(context: context)
     private lazy var gol = GOLKernel(context: context)
     private lazy var row = RowKernel(context: context)
-    private lazy var arenaTexture: MTLTexture = {
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm,
-            width: arenaSize.width,
-            height: arenaSize.height,
-            mipmapped: false
-        )
-        descriptor.usage = [.shaderRead, .shaderWrite]
-        return context.device.makeTexture(descriptor: descriptor)!
-    }()
     
     private var cgContext: CGContext!
     private var buffer: MTLBuffer!
@@ -83,7 +73,7 @@ class ViewController: UIViewController {
         let width = arenaSize.width
         let height = arenaSize.height
         let pixelRowAlignment = context.device.minimumTextureBufferAlignment(for: .r8Unorm)
-        let bytesPerRow = aligned(size: width, align: pixelRowAlignment)
+        let bytesPerRow = aligned(size: width * 4, align: pixelRowAlignment)
 
         let pagesize = Int(getpagesize())
         let dataSize = aligned(size: bytesPerRow * height, align: pagesize)
@@ -97,8 +87,8 @@ class ViewController: UIViewController {
             height: height,
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
-            space: CGColorSpaceCreateDeviceGray(),
-            bitmapInfo: CGImageAlphaInfo.none.rawValue
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )
         cgContext.scaleBy(x: 1.0, y: -1.0)
         cgContext.translateBy(x: 0, y: -CGFloat(cgContext.height))
@@ -115,7 +105,7 @@ class ViewController: UIViewController {
         )
         
         let textureDescriptor = MTLTextureDescriptor()
-        textureDescriptor.pixelFormat = .r8Unorm
+        textureDescriptor.pixelFormat = .bgra8Unorm
         textureDescriptor.width = cgContext.width
         textureDescriptor.height = cgContext.height
         textureDescriptor.storageMode = buffer.storageMode
@@ -127,10 +117,10 @@ class ViewController: UIViewController {
             bytesPerRow: cgContext.bytesPerRow
         )
         
-        cgContext.setFillColor(CGColor(gray: 1, alpha: 1))
+        cgContext.setFillColor(CGColor(gray: 1.0, alpha: 1))
         cgContext.fill(CGRect(origin: .init(x: cgContext.width / 2 - 1, y: 0), size: .init(width: 1, height: 1)))
 //        for x in 0..<cgContext.width {
-//            cgContext.setFillColor(CGColor(gray: Bool.random() ? 1 : 0, alpha: 1))
+//            cgContext.setFillColor(CGColor(gray: Bool.random() ? 1.0 : 0, alpha: 1.0))
 //            cgContext.fill(CGRect(origin: .init(x: x, y: 0), size: .init(width: 1, height: 1)))
 //        }
     }

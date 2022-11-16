@@ -96,14 +96,14 @@ final class RowKernel: UnaryImageKernel {
         "row_fill"
     }
     
-    var activations: [Int32] = .rule30
+    var activations: [vector_float4] = .rule90
     
     func encode(commandBuffer: MTLCommandBuffer, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         var offset = simd_int3(x: Int32(offset.x), y: Int32(offset.y), z: Int32(offset.z))
         var bitsCount = Int32(log2(Float(activations.count)))
         encoder.set(value: &offset, index: 0)
-        encoder.setBytes(&activations, length: MemoryLayout<Int32>.stride * activations.count, index: 1)
+        encoder.setBytes(&activations, length: MemoryLayout.stride(ofValue: activations[0]) * activations.count, index: 1)
         encoder.set(value: &bitsCount, index: 2)
         encoder.set(textures: [destinationTexture])
         let size = destinationTexture.size
@@ -112,26 +112,51 @@ final class RowKernel: UnaryImageKernel {
     }
 }
 
-extension Array where Element == Int32 {
-    static var rule90: Self {
-        rule([0b110, 0b100, 0b011, 0b001], 3)
+typealias f4 = vector_float4
+
+extension f4 {
+    init(_ r: Float, _ g: Float, _ b: Float, _ a: Float = 1.0) {
+        self.init(x: r, y: g, z: b, w: a)
+    }
+}
+
+extension Array {
+    static var rule90: [vector_float4] {
+        rule([
+            (0b110, f4(1, 0, 1)),
+            (0b100, f4(0, 1, 0)),
+            (0b011, f4(0, 0, 1)),
+            (0b001, f4(1, 0, 0))
+        ], 3)
     }
     
-    static var rule110: Self {
-        rule([0b110, 0b101, 0b011, 0b010, 0b001], 3)
+    static var rule110: [vector_float4] {
+        rule([
+            (0b110, f4(1, 0, 0)),
+            (0b101, f4(0, 1, 0)),
+            (0b011, f4(0, 0, 1)),
+            (0b010, f4(1, 1, 0)),
+            (0b001, f4(0, 1, 1))
+        ], 3)
     }
     
-    static var rule30: Self {
-        rule([0b100, 0b011, 0b010, 0b001], 3)
+    static var rule30: [vector_float4] {
+        rule([
+            (0b100, f4(1, 0, 0)),
+            (0b011, f4(0, 1, 0)),
+            (0b010, f4(0, 0, 1)),
+            (0b001, f4(1, 0, 1))
+        ], 3)
     }
     
     static func rule(
-        _ activations: Self,
-        _ numberOfBits: Int
-    ) -> Self {
-        var output = Array(repeating: 0, count: 1 << numberOfBits)
-        for activation in activations {
-            output[Int(activation)] = 1
+        _ activations: [(index: Int, color: vector_float4)],
+        _ numberOfBits: Int,
+        defaultColor: vector_float4 = vector_float4(x: 0, y: 0, z: 0, w: 1)
+    ) -> [vector_float4] {
+        var output = [vector_float4](repeating: defaultColor, count: 1 << numberOfBits)
+        for (index, color) in activations {
+            output[index] = color
         }
         return output
     }

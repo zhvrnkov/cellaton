@@ -14,7 +14,7 @@ kernel void copy(texture2d<float, access::sample> source [[ texture(0) ]],
 #warning "can we do read?"
     constexpr sampler s(filter::nearest);
     const float2 uv = float2(pos) / float2(destination.get_width(), destination.get_height());
-    destination.write(float4(source.sample(s, uv).r), pos);
+    destination.write(float4(source.sample(s, uv)), pos);
 }
 
 kernel void fill(texture2d<float, access::write> destination [[ texture(0) ]],
@@ -59,7 +59,7 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
 
 kernel void row_fill(texture2d<float, access::read_write> destination [[ texture(0) ]],
                      constant const int3& offset [[ buffer(0) ]],
-                     constant const int* activations [[ buffer(1) ]],
+                     constant const float4* activations [[ buffer(1) ]],
                      constant const int& bitsCount [[ buffer(2) ]],
                      uint2 pos [[ thread_position_in_grid ]]) {
     const auto size = uint2(destination.get_width(), destination.get_height());
@@ -71,10 +71,11 @@ kernel void row_fill(texture2d<float, access::read_write> destination [[ texture
         readPosition.y -= 1;
         readPosition.x += x;
         readPosition %= size;
-        int isLive = int(destination.read(readPosition).r > 0);
+        const auto color = destination.read(readPosition).rgb;
+        int isLive = int(dot(color, 1.0) > 0);
         lives |= isLive << ((high + 1) - (x - low));
     }
     
-    bool result = activations[lives];
-    destination.write(result ? 1 : 0, uint2(offset.xy) + pos);
+    auto result = activations[lives];
+    destination.write(result, uint2(offset.xy) + pos);
 }
