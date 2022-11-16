@@ -96,13 +96,43 @@ final class RowKernel: UnaryImageKernel {
         "row_fill"
     }
     
+    var activations: [Int32] = .rule30
+    
     func encode(commandBuffer: MTLCommandBuffer, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         var offset = simd_int3(x: Int32(offset.x), y: Int32(offset.y), z: Int32(offset.z))
+        var bitsCount = Int32(log2(Float(activations.count)))
         encoder.set(value: &offset, index: 0)
+        encoder.setBytes(&activations, length: MemoryLayout<Int32>.stride * activations.count, index: 1)
+        encoder.set(value: &bitsCount, index: 2)
         encoder.set(textures: [destinationTexture])
         let size = destinationTexture.size
         encoder.dispatch2d(state: pipelineState, size: .init(width: size.width, height: 1, depth: size.depth))
         encoder.endEncoding()
+    }
+}
+
+extension Array where Element == Int32 {
+    static var rule90: Self {
+        rule([0b110, 0b100, 0b011, 0b001], 3)
+    }
+    
+    static var rule110: Self {
+        rule([0b110, 0b101, 0b011, 0b010, 0b001], 3)
+    }
+    
+    static var rule30: Self {
+        rule([0b100, 0b011, 0b010, 0b001], 3)
+    }
+    
+    static func rule(
+        _ activations: Self,
+        _ numberOfBits: Int
+    ) -> Self {
+        var output = Array(repeating: 0, count: 1 << numberOfBits)
+        for activation in activations {
+            output[Int(activation)] = 1
+        }
+        return output
     }
 }

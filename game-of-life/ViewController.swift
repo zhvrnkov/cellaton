@@ -16,7 +16,7 @@ func aligned(size: Int, align: Int) -> Int {
 
 class ViewController: UIViewController {
     
-    var arenaSize: (width: Int, height: Int) = (1024 * 4, 1024 * 2)
+    var arenaSize: (width: Int, height: Int) = (1024, 1024)
     
     private lazy var context = try! MTLContext()
     private lazy var mtkView: MTKView = {
@@ -129,6 +129,10 @@ class ViewController: UIViewController {
         
         cgContext.setFillColor(CGColor(gray: 1, alpha: 1))
         cgContext.fill(CGRect(origin: .init(x: cgContext.width / 2 - 1, y: 0), size: .init(width: 1, height: 1)))
+//        for x in 0..<cgContext.width {
+//            cgContext.setFillColor(CGColor(gray: Bool.random() ? 1 : 0, alpha: 1))
+//            cgContext.fill(CGRect(origin: .init(x: x, y: 0), size: .init(width: 1, height: 1)))
+//        }
     }
     
     override func viewDidLayoutSubviews() {

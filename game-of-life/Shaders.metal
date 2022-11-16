@@ -59,31 +59,22 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
 
 kernel void row_fill(texture2d<float, access::read_write> destination [[ texture(0) ]],
                      constant const int3& offset [[ buffer(0) ]],
+                     constant const int* activations [[ buffer(1) ]],
+                     constant const int& bitsCount [[ buffer(2) ]],
                      uint2 pos [[ thread_position_in_grid ]]) {
     const auto size = uint2(destination.get_width(), destination.get_height());
-    bool lives[3];
-    for (int x = -1; x <= 1; x++) {
+    int lives = 0;
+    int high = bitsCount / 2;
+    int low = -high;
+    for (int x = low; x <= high; x++) {
         uint2 readPosition = uint2(offset.xy) + pos;
         readPosition.y -= 1;
         readPosition.x += x;
         readPosition %= size;
-        lives[x + 1] = destination.read(readPosition).r > 0;
+        int isLive = int(destination.read(readPosition).r > 0);
+        lives |= isLive << ((high + 1) - (x - low));
     }
     
-//    rule 30
-//    bool result = lives[0] ^ (lives[1] | lives[2]);
-    
-//   rule 101
-//    int sum = lives[0] + lives[1] + lives[2];
-//    bool result;
-//    if (sum == 2) result = true;
-//    else if (lives[1] && sum == 1) result = true;
-//    else if (lives[2] && sum == 1) result = true;
-//    else result = false;
-    
-//    rule 90
-    int livesb = int(lives[0]) << 0 | int(lives[1]) << 1 | int(lives[2]) << 2;
-    bool result = livesb == 0b110 || livesb == 0b100 || livesb == 0b011 || livesb == 0b001;
-    
+    bool result = activations[lives];
     destination.write(result ? 1 : 0, uint2(offset.xy) + pos);
 }
