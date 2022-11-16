@@ -72,7 +72,8 @@ final class FillKernel: UnaryImageKernel {
         var color = simd_float4(x: 1.0, y: 0, z: 0, w: 1.0)
         encoder.set(value: &color, index: 0)
         encoder.set(textures: [destinationTexture])
-        encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
+        let size = destinationTexture.size
+        encoder.dispatch2d(state: pipelineState, size: .init(width: size.width, height: 1, depth: size.depth))
         encoder.endEncoding()
     }
 }
@@ -86,6 +87,22 @@ final class GOLKernel: UnaryImageKernel {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         encoder.set(textures: [sourceTexture, destinationTexture])
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
+        encoder.endEncoding()
+    }
+}
+
+final class RowKernel: UnaryImageKernel {
+    override class var kernelName: String {
+        "row_fill"
+    }
+    
+    func encode(commandBuffer: MTLCommandBuffer, destinationTexture: MTLTexture) {
+        let encoder = commandBuffer.makeComputeCommandEncoder()!
+        var offset = simd_int3(x: Int32(offset.x), y: Int32(offset.y), z: Int32(offset.z))
+        encoder.set(value: &offset, index: 0)
+        encoder.set(textures: [destinationTexture])
+        let size = destinationTexture.size
+        encoder.dispatch2d(state: pipelineState, size: .init(width: size.width, height: 1, depth: size.depth))
         encoder.endEncoding()
     }
 }

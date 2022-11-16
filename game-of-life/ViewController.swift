@@ -16,7 +16,7 @@ func aligned(size: Int, align: Int) -> Int {
 
 class ViewController: UIViewController {
     
-    let arenaMeasure = 64
+    var arenaSize: (width: Int, height: Int) = (1024 * 4, 1024 * 2)
     
     private lazy var context = try! MTLContext()
     private lazy var mtkView: MTKView = {
@@ -35,11 +35,12 @@ class ViewController: UIViewController {
     private lazy var copy = CopyKernel(context: context)
     private lazy var fill = FillKernel(context: context)
     private lazy var gol = GOLKernel(context: context)
+    private lazy var row = RowKernel(context: context)
     private lazy var arenaTexture: MTLTexture = {
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: .bgra8Unorm,
-            width: arenaMeasure,
-            height: arenaMeasure,
+            width: arenaSize.width,
+            height: arenaSize.height,
             mipmapped: false
         )
         descriptor.usage = [.shaderRead, .shaderWrite]
@@ -51,21 +52,36 @@ class ViewController: UIViewController {
     private var texture: MTLTexture!
     
     private var preferredFPS: Int {
-        isGamePaused ? 60 : 10
+        isGamePaused ? 60 : 120
     }
     
     private var isGamePaused = true {
         didSet {
             mtkView.preferredFramesPerSecond = preferredFPS
+            title = titleText
         }
+    }
+    private var titleText: String {
+        isGamePaused ? "Paused" : "In Progress"
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        title = titleText
+        navigationItem.rightBarButtonItem = UIBarButtonItem(image: .actions, primaryAction: nil, menu: nil)
+        let actions = [
+            UIAction(title: "Fill with randoms", handler: { [weak self] _ in
+                self?.fillArenaWithRandoms()
+            })
+        ]
+        let menu = UIMenu(title: "Menu", children: actions)
+        navigationItem.rightBarButtonItem?.menu = menu
+        
         view.addSubview(mtkView)
         
-        let width = arenaMeasure
-        let height = arenaMeasure
+        let width = arenaSize.width
+        let height = arenaSize.height
         let pixelRowAlignment = context.device.minimumTextureBufferAlignment(for: .r8Unorm)
         let bytesPerRow = aligned(size: width, align: pixelRowAlignment)
 
@@ -110,13 +126,18 @@ class ViewController: UIViewController {
             offset: 0,
             bytesPerRow: cgContext.bytesPerRow
         )
+        
+        cgContext.setFillColor(CGColor(gray: 1, alpha: 1))
+        cgContext.fill(CGRect(origin: .init(x: cgContext.width / 2 - 1, y: 0), size: .init(width: 1, height: 1)))
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        let minMeasure = min(view.bounds.width, view.bounds.height)
+        let bounds = view.safeAreaBounds
+        let minMeasure = min(bounds.width, bounds.height)
         let size = CGSize(width: minMeasure, height: minMeasure)
-        mtkView.frame = CGRect(origin: .zero, size: size)
+        mtkView.frame.origin = bounds.origin
+        mtkView.frame.size = bounds.size
     }
     
     @objc private func tap(gesture: UITapGestureRecognizer) {
@@ -152,11 +173,21 @@ class ViewController: UIViewController {
         var location = location
         location.x /= mtkView.bounds.width
         location.y /= mtkView.bounds.height
-        location.x *= .init(arenaMeasure)
-        location.y *= .init(arenaMeasure)
+        location.x *= .init(arenaSize.width)
+        location.y *= .init(arenaSize.height)
         location.x = floor(location.x)
         location.y = floor(location.y)
         return location
+    }
+    
+    private func fillArenaWithRandoms() {
+        for x in 0..<arenaSize.width {
+            for y in 0..<arenaSize.height {
+                let color = CGColor(gray: Bool.random() ? 1 : 0, alpha: 1)
+                cgContext.setFillColor(color)
+                cgContext.fill(CGRect(origin: .init(x: x, y: y), size: .init(width: 1, height: 1)))
+            }
+        }
     }
 }
 
@@ -173,26 +204,47 @@ extension ViewController: MTKViewDelegate {
         }
         
         if isGamePaused == false {
-            let tmpImage = MPSTemporaryImage(
-                commandBuffer: commandBuffer,
-                textureDescriptor: texture.temporaryImageDescriptor
-            )
-            defer {
-                tmpImage.readCount = 0
-            }
-            let tmpTexture = tmpImage.texture
-            let blit = commandBuffer.makeBlitCommandEncoder()!
-            blit.copy(from: texture, to: tmpTexture)
-            blit.endEncoding()
-            gol.encode(commandBuffer: commandBuffer, sourceTexture: tmpTexture, destinationTexture: texture)
+//            let tmpImage = MPSTemporaryImage(
+//                commandBuffer: commandBuffer,
+//                textureDescriptor: texture.temporaryImageDescriptor
+//            )
+//            defer {
+//                tmpImage.readCount = 0
+//            }
+//            let tmpTexture = tmpImage.texture
+//            let blit = commandBuffer.makeBlitCommandEncoder()!
+//            blit.copy(from: texture, to: tmpTexture)
+//            blit.endEncoding()
+//            gol.encode(commandBuffer: commandBuffer, sourceTexture: tmpTexture, destinationTexture: texture)
+            row.offset.y += 1
+            row.encode(commandBuffer: commandBuffer, destinationTexture: texture)
         }
 
         let drawableTexture = drawable.texture
-//        fill.encode(commandBuffer: commandBuffer, destinationTexture: arenaTexture)
         copy.encode(commandBuffer: commandBuffer, sourceTexture: texture, destinationTexture: drawableTexture)
-
+        
         commandBuffer.present(drawable)
         commandBuffer.commit()
 
+    }
+}
+
+extension UIView {
+    var safeAreaBounds: CGRect {
+        let origin = CGPoint(x: safeAreaInsets.left, y: safeAreaInsets.top)
+        let size = CGSize(width: bounds.width - safeAreaInsets.horizontalInsets,
+                          height: bounds.height - safeAreaInsets.verticalInsets)
+        return .init(origin: origin, size: size)
+
+    }
+}
+
+extension UIEdgeInsets {
+    var verticalInsets: CGFloat {
+        top + bottom
+    }
+    
+    var horizontalInsets: CGFloat {
+        left + right
     }
 }
