@@ -136,7 +136,7 @@ class CommonViewController: UIViewController {
         )
         
         let textureDescriptor = MTLTextureDescriptor()
-        textureDescriptor.pixelFormat = .bgra8Unorm
+        textureDescriptor.pixelFormat = .rgba8Unorm
         textureDescriptor.width = cgContext.width
         textureDescriptor.height = cgContext.height
         textureDescriptor.storageMode = buffer.storageMode

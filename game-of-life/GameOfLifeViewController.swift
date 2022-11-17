@@ -17,7 +17,7 @@ final class GameOfLifeViewController: CommonViewController {
     private let setup: Setup = {
         return .init(
             gridType: .moore1,
-            kind: .seeds
+            kind: .brianBrain
         )
     }()
     private lazy var gol: GOLKernel = {
@@ -28,7 +28,7 @@ final class GameOfLifeViewController: CommonViewController {
     }()
     
     override var arenaDimensions: CGSize {
-        .init(width: 32, height: 32)
+        .init(width: 1024, height: 1024)
     }
     
     override var shouldPreserveSquareCells: Bool {
@@ -41,9 +41,29 @@ final class GameOfLifeViewController: CommonViewController {
         cgContext.setFillColor(.init(gray: 1, alpha: 1))
         var origin = CGPoint(x: cgContext.width / 2 - 1, y: cgContext.height / 2 - 1)
         
-        let grid: [[Int]] = .threeSquares
-        
+//        var grid: [[Int]] = [
+//            [1, 0, 0, 0, 1],
+//            [0, 1, 1, 0, 0],
+//            [0, 1, 1, 1, 0],
+//            [0, 0, 1, 1, 0],
+//            [1, 0, 0, 0, 1],
+//        ]
 //        fill(grid: grid)
+//        grid = [
+//            [0, 1, 0, 0, 0],
+//            [1, 0, 0, 1, 1],
+//            [1, 0, 0, 0, 0],
+//            [0, 0, 1, 0, 0],
+//            [0, 1, 0, 0, 0],
+//        ]
+//        fill(grid: grid, color: CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+        let count = cgContext.height
+        var grid: [[Int]] = (0..<count).map { _ in
+            (0..<count).map { _ in
+                Bool.random() ? 1 : 0
+            }
+        }
+        fill(grid: grid)
     }
     
     override func encode(
@@ -58,7 +78,7 @@ final class GameOfLifeViewController: CommonViewController {
         )
     }
     
-    private func fill(grid: [[Int]], center: CGPoint? = nil) {
+    private func fill(grid: [[Int]], center: CGPoint? = nil, color: CGColor = CGColor(gray: 1, alpha: 1)) {
         let center = center ?? CGPoint(x: cgContext.width / 2 - 1, y: cgContext.height / 2 - 1)
         let rangeY = grid.count / 2
         let rangeX = grid[0].count / 2
@@ -68,9 +88,11 @@ final class GameOfLifeViewController: CommonViewController {
             for x in -rangeX...rangeX {
                 let lookX = x + rangeX
                 let point = CGPoint(x: Int(center.x) + x, y: Int(center.y) + y)
-                let color = CGColor(gray: grid[lookY][lookX] == 0 ? 0 : 1, alpha: 1)
-                cgContext.setFillColor(color)
-                cgContext.fillPixel(at: point)
+//                let color = grid[lookY][lookX] == 0 ? CGColor(gray: 0, alpha: 1) : color
+                if (grid[lookY][lookX] == 0) == false {
+                    cgContext.setFillColor(color)
+                    cgContext.fillPixel(at: point)
+                }
             }
         }
     }
@@ -101,6 +123,7 @@ extension GameOfLifeViewController {
         enum Kind {
             case convay
             case seeds
+            case brianBrain
             
             func data(gridLength: Int) -> GOLRule {
                 switch self {
@@ -108,6 +131,8 @@ extension GameOfLifeViewController {
                     return .convay(gridLength: gridLength)
                 case .seeds:
                     return .seeds(gridLength: gridLength)
+                case .brianBrain:
+                    return .brianBrain(gridLength: gridLength)
                 }
             }
         }

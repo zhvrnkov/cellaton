@@ -220,6 +220,20 @@ extension GOLRule {
         return output
     }
     
+    static func brianBrain(gridLength: Int) -> Self {
+        var output = golRule(gridLength: gridLength)
+        
+        let liveRule = rule([], gridLength, defaultColor: f4(0, 0, 1))
+        let dyingRule = rule([], gridLength)
+        let deadRule = rule([(2, f4(1,1,1))], gridLength)
+        
+        output[0] = deadRule
+        output[1] = dyingRule
+        output[3] = liveRule
+        
+        return output
+    }
+    
     static func golRule(gridLength: Int) -> Self {
         let states: [Int] = [0, 1, 2, 3]
         return [[f4]](repeating: rule([], gridLength), count: states.count)

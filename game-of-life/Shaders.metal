@@ -44,8 +44,9 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
             int gridX = x + rangeX;
             int2 readPosition = int2(pos) + int2(x, y);
             // negative mod positive returns not wrapped result
-            readPosition = (readPosition + size) % size;
-            auto isLive = dot(previousState.read(uint2(readPosition)).rgb, 1.0) > 0;
+//            readPosition = (readPosition + size) % size;
+            auto isLive = dot(previousState.read(uint2(readPosition)).rgb, 1.0) == 3;
+#warning counting only white as live
             auto shouldSum = grid[gridY * gridDim.x + gridX];
             sum += (shouldSum && isLive) ? 1 : 0;
         }
