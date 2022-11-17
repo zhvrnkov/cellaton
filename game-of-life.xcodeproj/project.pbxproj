@@ -14,6 +14,9 @@
 		AD295CA62924112200D79B1C /* MTLContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD295CA52924112200D79B1C /* MTLContext.swift */; };
 		AD295CA8292411A500D79B1C /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = AD295CA7292411A500D79B1C /* Shaders.metal */; };
 		AD295CAA292411DE00D79B1C /* Kernels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD295CA9292411DE00D79B1C /* Kernels.swift */; };
+		AD812E9E29267EAE00C2F028 /* GameOfLifeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812E9D29267EAE00C2F028 /* GameOfLifeViewController.swift */; };
+		AD812EA02926802900C2F028 /* MenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812E9F2926802900C2F028 /* MenuViewController.swift */; };
+		AD812EA2292680DF00C2F028 /* RuleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EA1292680DF00C2F028 /* RuleViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +29,9 @@
 		AD295CA52924112200D79B1C /* MTLContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MTLContext.swift; sourceTree = "<group>"; };
 		AD295CA7292411A500D79B1C /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		AD295CA9292411DE00D79B1C /* Kernels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Kernels.swift; sourceTree = "<group>"; };
+		AD812E9D29267EAE00C2F028 /* GameOfLifeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOfLifeViewController.swift; sourceTree = "<group>"; };
+		AD812E9F2926802900C2F028 /* MenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuViewController.swift; sourceTree = "<group>"; };
+		AD812EA1292680DF00C2F028 /* RuleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +72,9 @@
 				AD295CA52924112200D79B1C /* MTLContext.swift */,
 				AD295CA7292411A500D79B1C /* Shaders.metal */,
 				AD295CA9292411DE00D79B1C /* Kernels.swift */,
+				AD812E9D29267EAE00C2F028 /* GameOfLifeViewController.swift */,
+				AD812E9F2926802900C2F028 /* MenuViewController.swift */,
+				AD812EA1292680DF00C2F028 /* RuleViewController.swift */,
 			);
 			path = "game-of-life";
 			sourceTree = "<group>";
@@ -140,11 +149,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD812EA02926802900C2F028 /* MenuViewController.swift in Sources */,
 				AD295C962924111700D79B1C /* ViewController.swift in Sources */,
 				AD295CA62924112200D79B1C /* MTLContext.swift in Sources */,
 				AD295CAA292411DE00D79B1C /* Kernels.swift in Sources */,
 				AD295C922924111700D79B1C /* AppDelegate.swift in Sources */,
 				AD295CA8292411A500D79B1C /* Shaders.metal in Sources */,
+				AD812E9E29267EAE00C2F028 /* GameOfLifeViewController.swift in Sources */,
+				AD812EA2292680DF00C2F028 /* RuleViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

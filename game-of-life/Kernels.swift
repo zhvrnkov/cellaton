@@ -91,19 +91,21 @@ final class GOLKernel: UnaryImageKernel {
     }
 }
 
-final class RowKernel: UnaryImageKernel {
+typealias Rule = [vector_float4]
+final class RuleKernel: UnaryImageKernel {
+    
     override class var kernelName: String {
         "row_fill"
     }
     
-    var activations: [vector_float4] = .rule90
+    var rule: Rule = []
     
     func encode(commandBuffer: MTLCommandBuffer, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         var offset = simd_int3(x: Int32(offset.x), y: Int32(offset.y), z: Int32(offset.z))
-        var bitsCount = Int32(log2(Float(activations.count)))
+        var bitsCount = Int32(log2(Float(rule.count)))
         encoder.set(value: &offset, index: 0)
-        encoder.setBytes(&activations, length: MemoryLayout.stride(ofValue: activations[0]) * activations.count, index: 1)
+        encoder.setBytes(&rule, length: MemoryLayout.stride(ofValue: rule[0]) * rule.count, index: 1)
         encoder.set(value: &bitsCount, index: 2)
         encoder.set(textures: [destinationTexture])
         let size = destinationTexture.size
@@ -120,8 +122,8 @@ extension f4 {
     }
 }
 
-extension Array {
-    static var rule90: [vector_float4] {
+extension Rule {
+    static var rule90: Rule {
         rule([
             (0b110, f4(1, 0, 1)),
             (0b100, f4(0, 1, 0)),
@@ -130,7 +132,7 @@ extension Array {
         ], 3)
     }
     
-    static var rule110: [vector_float4] {
+    static var rule110: Rule {
         rule([
             (0b110, f4(1, 0, 0)),
             (0b101, f4(0, 1, 0)),
@@ -140,7 +142,7 @@ extension Array {
         ], 3)
     }
     
-    static var rule30: [vector_float4] {
+    static var rule30: Rule {
         rule([
             (0b100, f4(1, 0, 0)),
             (0b011, f4(0, 1, 0)),
@@ -148,7 +150,9 @@ extension Array {
             (0b001, f4(1, 0, 1))
         ], 3)
     }
-    
+}
+
+extension Array {
     static func rule(
         _ activations: [(index: Int, color: vector_float4)],
         _ numberOfBits: Int,

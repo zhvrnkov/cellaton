@@ -16,8 +16,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        let controller = ViewController()
-        let navigationController = UINavigationController(rootViewController: controller)
+        let menu = MenuViewController(controllersType: [
+            GameOfLifeViewController.self,
+            Rule110ViewController.self,
+            Rule90ViewController.self,
+            Rule30ViewController.self
+        ])
+        let navigationController = UINavigationController(rootViewController: menu)
+        navigationController.pushViewController(GameOfLifeViewController(), animated: false)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
         return true

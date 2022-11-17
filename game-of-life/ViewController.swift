@@ -14,11 +14,43 @@ func aligned(size: Int, align: Int) -> Int {
     return count * align
 }
 
-class ViewController: UIViewController {
+class CommonViewController: UIViewController {
     
-    var arenaSize: (width: Int, height: Int) = (1024, 1024)
+    var inProgressFPS: Int {
+        60
+    }
+    var pausedFPS: Int {
+        60
+    }
     
-    private lazy var context = try! MTLContext()
+    var arenaDimensions: CGSize {
+        .init(width: 128, height: 128)
+    }
+    
+    var shouldPreserveSquareCells: Bool {
+        return true
+    }
+    
+    private lazy var arenaSize: (width: Int, height: Int) = {
+        var output = (width: Int(arenaDimensions.width), height: Int(arenaDimensions.height))
+        guard shouldPreserveSquareCells else {
+            return output
+        }
+        let windowSize = UIApplication.shared.keyWindow!.bounds.size
+        if windowSize.width > windowSize.height {
+            output.width *= 1
+            let measure = windowSize.width / CGFloat(output.width)
+            output.height = Int(windowSize.height / measure)
+        }
+        else if windowSize.width < windowSize.height {
+            let measure = windowSize.height / CGFloat(output.height)
+            output.width = Int(windowSize.width / measure)
+            output.height *= 1
+        }
+        return output
+    }()
+    
+    private(set) lazy var context = try! MTLContext()
     private lazy var mtkView: MTKView = {
         let view = MTKView()
         view.clearColor = .init(red: 0, green: 1.0, blue: 0, alpha: 1.0)
@@ -34,15 +66,13 @@ class ViewController: UIViewController {
     }()
     private lazy var copy = CopyKernel(context: context)
     private lazy var fill = FillKernel(context: context)
-    private lazy var gol = GOLKernel(context: context)
-    private lazy var row = RowKernel(context: context)
     
-    private var cgContext: CGContext!
+    private(set) var cgContext: CGContext!
     private var buffer: MTLBuffer!
     private var texture: MTLTexture!
     
     private var preferredFPS: Int {
-        isGamePaused ? 60 : 120
+        isGamePaused ? pausedFPS : inProgressFPS
     }
     
     private var isGamePaused = true {
@@ -117,8 +147,8 @@ class ViewController: UIViewController {
             bytesPerRow: cgContext.bytesPerRow
         )
         
-        cgContext.setFillColor(CGColor(gray: 1.0, alpha: 1))
-        cgContext.fill(CGRect(origin: .init(x: cgContext.width / 2 - 1, y: 0), size: .init(width: 1, height: 1)))
+//        cgContext.setFillColor(CGColor(gray: 1.0, alpha: 1))
+//        cgContext.fill(CGRect(origin: .init(x: cgContext.width / 2 - 1, y: 0), size: .init(width: 1, height: 1)))
 //        for x in 0..<cgContext.width {
 //            cgContext.setFillColor(CGColor(gray: Bool.random() ? 1.0 : 0, alpha: 1.0))
 //            cgContext.fill(CGRect(origin: .init(x: x, y: 0), size: .init(width: 1, height: 1)))
@@ -183,9 +213,17 @@ class ViewController: UIViewController {
             }
         }
     }
+    
+    func encode(
+        commandBuffer: MTLCommandBuffer,
+        previousState: MTLTexture,
+        newState: MTLTexture
+    ) {
+        
+    }
 }
 
-extension ViewController: MTKViewDelegate {
+extension CommonViewController: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         print(#function, size)
     }
@@ -198,20 +236,21 @@ extension ViewController: MTKViewDelegate {
         }
         
         if isGamePaused == false {
-//            let tmpImage = MPSTemporaryImage(
-//                commandBuffer: commandBuffer,
-//                textureDescriptor: texture.temporaryImageDescriptor
-//            )
-//            defer {
-//                tmpImage.readCount = 0
-//            }
-//            let tmpTexture = tmpImage.texture
-//            let blit = commandBuffer.makeBlitCommandEncoder()!
-//            blit.copy(from: texture, to: tmpTexture)
-//            blit.endEncoding()
+            let tmpImage = MPSTemporaryImage(
+                commandBuffer: commandBuffer,
+                textureDescriptor: texture.temporaryImageDescriptor
+            )
+            defer {
+                tmpImage.readCount = 0
+            }
+            let tmpTexture = tmpImage.texture
+            let blit = commandBuffer.makeBlitCommandEncoder()!
+            blit.copy(from: texture, to: tmpTexture)
+            blit.endEncoding()
+            encode(commandBuffer: commandBuffer, previousState: tmpTexture, newState: texture)
 //            gol.encode(commandBuffer: commandBuffer, sourceTexture: tmpTexture, destinationTexture: texture)
-            row.offset.y += 1
-            row.encode(commandBuffer: commandBuffer, destinationTexture: texture)
+//            row.offset.y += 1
+//            row.encode(commandBuffer: commandBuffer, destinationTexture: texture)
         }
 
         let drawableTexture = drawable.texture
@@ -240,5 +279,11 @@ extension UIEdgeInsets {
     
     var horizontalInsets: CGFloat {
         left + right
+    }
+}
+
+extension CGContext {
+    func fillPixel(at location: CGPoint) {
+        fill(CGRect(origin: location, size: .init(width: 1, height: 1)))
     }
 }
