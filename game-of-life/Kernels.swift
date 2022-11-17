@@ -90,13 +90,12 @@ final class GOLKernel: UnaryImageKernel {
     
     private(set) var grid: Grid = .moore1
     private lazy var flatGrid = grid.reduce(Grid.Element()) { $0 + $1 }
-    private(set) lazy var liveActivations: Rule = .convayLiveActivations(gridLength: grid.length)
-    private(set) lazy var deadActivations: Rule = .convayDeadActivations(gridLength: grid.length)
+    private(set) lazy var rules: GOLRule = .convay(gridLength: grid.length)
+    private lazy var flatRules = rules.reduce(GOLRule.Element()) { $0 + $1 }
     
-    func setup(grid: Grid, live: Rule, dead: Rule) {
+    func setup(grid: Grid, rules: GOLRule) {
         self.grid = grid
-        self.liveActivations = live
-        self.deadActivations = dead
+        self.rules = rules
     }
     
     override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
@@ -105,12 +104,11 @@ final class GOLKernel: UnaryImageKernel {
         let gridHeight = grid.count
         let gridWidth = grid[0].count
         var gridDim = vector_int2(x: Int32(gridWidth), y: Int32(gridHeight))
-        var flatGrid = grid.reduce([Int32]()) { $0 + $1 }
-        let gridLength = MemoryLayout.stride(ofValue: flatGrid[0]) * flatGrid.count
-        encoder.setBytes(&flatGrid, length: gridLength, index: 0)
+    
+        encoder.set(array: &flatGrid, index: 0)
         encoder.set(value: &gridDim, index: 1)
-        encoder.set(array: &liveActivations, index: 2)
-        encoder.set(array: &deadActivations, index: 3)
+        encoder.set(array: &flatRules, index: 2)
+
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
         encoder.endEncoding()
     }
@@ -194,6 +192,40 @@ extension f4 {
     }
 }
 
+// State = ColorComponentsSum = 0, 1, 2, 3
+// NeibghorsCount = Int
+// Color = f4 = vector_float4
+typealias GOLRule = [[f4]] // [State: [NeibghorsCount: Color]]
+
+extension GOLRule {
+    static func convay(gridLength: Int) -> Self {
+        var output = golRule(gridLength: gridLength)
+        let deadRule = rule([(3, f4(1,1,1))], gridLength)
+        let liveRule = rule([(2, f4(1,1,1)), (3, f4(1,1,1))], gridLength)
+
+        output[0] = deadRule
+        output[3] = liveRule
+        
+        return output
+    }
+    
+    static func seeds(gridLength: Int) -> Self {
+        var output = golRule(gridLength: gridLength)
+        let liveRule = rule([], gridLength)
+        let deadRule = rule([(2, f4(1,1,1))], gridLength)
+        
+        output[0] = deadRule
+        output[3] = liveRule
+        
+        return output
+    }
+    
+    static func golRule(gridLength: Int) -> Self {
+        let states: [Int] = [0, 1, 2, 3]
+        return [[f4]](repeating: rule([], gridLength), count: states.count)
+    }
+}
+
 extension Rule {
     static var rule90: Rule {
         rule([
@@ -221,31 +253,6 @@ extension Rule {
             (0b010, f4(0, 0, 1)),
             (0b001, f4(1, 0, 1))
         ], 3)
-    }
-
-    typealias NeibghorsCount = Int
-    typealias State = Int // 0, 1, 2 or 3
-    typealias Ruule = [State: [NeibghorsCount: State]]
-    
-    static func convayLiveActivations(gridLength: Int) -> Rule {
-        rule([
-            (2, f4(1,1,1)),
-            (3, f4(1,1,1))
-        ], gridLength)
-    }
-
-    static func convayDeadActivations(gridLength: Int) -> Rule {
-        rule([
-            (3, f4(1,1,1))
-        ], gridLength)
-    }
-    
-    static func seedsLiveActivations(gridLength: Int) -> Rule {
-        rule([], gridLength)
-    }
-    
-    static func seedsDeadActivations(gridLength: Int) -> Rule {
-        rule([(2, f4(1,1,1))], gridLength)
     }
 }
 

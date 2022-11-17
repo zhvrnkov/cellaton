@@ -16,19 +16,19 @@ final class GameOfLifeViewController: CommonViewController {
     
     private let setup: Setup = {
         return .init(
-            gridType: .moore2,
-            kind: .convay
+            gridType: .moore1,
+            kind: .seeds
         )
     }()
     private lazy var gol: GOLKernel = {
         let kernel = GOLKernel(context: context)
-        let (grid, live, dead) = setup.data
-        kernel.setup(grid: grid, live: live, dead: dead)
+        let (grid, rules) = setup.data
+        kernel.setup(grid: grid, rules: rules)
         return kernel
     }()
     
     override var arenaDimensions: CGSize {
-        .init(width: 256, height: 256)
+        .init(width: 32, height: 32)
     }
     
     override var shouldPreserveSquareCells: Bool {
@@ -43,7 +43,7 @@ final class GameOfLifeViewController: CommonViewController {
         
         let grid: [[Int]] = .threeSquares
         
-        fill(grid: grid)
+//        fill(grid: grid)
     }
     
     override func encode(
@@ -102,14 +102,12 @@ extension GameOfLifeViewController {
             case convay
             case seeds
             
-            func data(gridLength: Int) -> (Rule, Rule) {
+            func data(gridLength: Int) -> GOLRule {
                 switch self {
                 case .convay:
-                    return (.convayLiveActivations(gridLength: gridLength),
-                            .convayDeadActivations(gridLength: gridLength))
+                    return .convay(gridLength: gridLength)
                 case .seeds:
-                    return (.seedsLiveActivations(gridLength: gridLength),
-                            .seedsDeadActivations(gridLength: gridLength))
+                    return .seeds(gridLength: gridLength)
                 }
             }
         }
@@ -117,10 +115,10 @@ extension GameOfLifeViewController {
         let gridType: GridType
         let kind: Kind
         
-        var data: (Grid, Rule, Rule) {
+        var data: (Grid, GOLRule) {
             let grid = gridType.data
             let rules = kind.data(gridLength: grid.length)
-            return (grid, rules.0, rules.1)
+            return (grid, rules)
         }
     }
 }

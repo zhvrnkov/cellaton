@@ -28,12 +28,12 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
                 texture2d<float, access::write> newState [[ texture(1) ]],
                 constant const int* grid [[ buffer(0) ]],
                 constant const int2& gridDim [[ buffer(1) ]],
-                constant const float4* liveActivations [[ buffer(2) ]],
-                constant const float4* deadActivations [[ buffer(3) ]],
+                constant const float4* rule [[ buffer(2) ]],
                 uint2 pos [[ thread_position_in_grid ]]) {
     
     const int2 size = int2(previousState.get_width(), previousState.get_height());
-    const bool isLive = dot(previousState.read(pos).rgb, 1.0) > 0;
+    const int state = int(dot(previousState.read(pos).rgb, 1.0));
+    const int gridLength = gridDim.x * gridDim.y;
     
     uint sum = 0;
     int rangeX = gridDim.x / 2;
@@ -51,7 +51,7 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
         }
     }
     
-    const auto output = (isLive ? liveActivations : deadActivations)[sum];
+    const auto output = rule[state * gridLength + sum];
     newState.write(output, pos);
 }
 
