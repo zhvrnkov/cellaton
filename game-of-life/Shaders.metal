@@ -26,35 +26,34 @@ kernel void fill(texture2d<float, access::write> destination [[ texture(0) ]],
 
 kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
                 texture2d<float, access::write> newState [[ texture(1) ]],
+                constant const int* grid [[ buffer(0) ]],
+                constant const int2& gridDim [[ buffer(1) ]],
+                constant const float4* liveActivations [[ buffer(2) ]],
+                constant const float4* deadActivations [[ buffer(3) ]],
                 uint2 pos [[ thread_position_in_grid ]]) {
     
-    const uint2 size = uint2(previousState.get_width(), previousState.get_height());
-    const bool isLive = previousState.read(pos).r > 0;
+    const int2 size = int2(previousState.get_width(), previousState.get_height());
+    const bool isLive = dot(previousState.read(pos).rgb, 1.0) > 0;
     
-    bool neibghors[3][3];
     uint sum = 0;
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= +1; y++) {
-            uint2 readPosition = pos + uint2(x, y);
-            readPosition %= size;
-            auto isLive = previousState.read(readPosition).r > 0;
-            neibghors[x + 1][y + 1] = isLive;
-            sum += isLive ? 1 : 0;
+    int rangeX = gridDim.x / 2;
+    int rangeY = gridDim.y / 2;
+#warning iterate over y at first for cache
+    for (int x = -rangeX; x <= rangeX; x++) {
+        int gridX = x + rangeX;
+        for (int y = -rangeY; y <= rangeY; y++) {
+            int gridY = y + rangeY;
+            int2 readPosition = int2(pos) + int2(x, y);
+            // negative mod positive returns not wrapped result
+            readPosition = (readPosition + size) % size;
+            auto isLive = dot(previousState.read(uint2(readPosition)).rgb, 1.0) > 0;
+            auto shouldSum = grid[gridY * gridDim.x + gridX];
+            sum += (shouldSum && isLive) ? 1 : 0;
         }
     }
     
-    sum -= uint(isLive);
-    
-    bool willLive;
-    if (isLive) {
-        willLive = (sum == 2) || (sum == 3);
-    }
-    else {
-        willLive = sum == 3;
-    }
-            
-    
-    newState.write(willLive ? 1 : 0, pos);
+    const auto output = (isLive ? liveActivations : deadActivations)[sum];
+    newState.write(output, pos);
 }
 
 kernel void row_fill(texture2d<float, access::read_write> destination [[ texture(0) ]],
@@ -73,7 +72,7 @@ kernel void row_fill(texture2d<float, access::read_write> destination [[ texture
         readPosition %= size;
         const auto color = destination.read(readPosition).rgb;
         int isLive = int(dot(color, 1.0) > 0);
-        lives |= isLive << ((high + 1) - (x - low));
+        lives |= isLive << (high - x);
     }
     
     auto result = activations[lives];

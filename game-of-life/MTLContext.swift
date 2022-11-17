@@ -140,6 +140,10 @@ extension MTLComputeCommandEncoder {
         setBytes(&value, length: MemoryLayout<T>.stride, index: index)
     }
     
+    func set<T>(array: inout [T], index: Int) {
+        setBytes(&array, length: MemoryLayout<T>.stride * array.count, index: index)
+    }
+    
     func dispatch2d(state: MTLComputePipelineState, size: MTLSize) {
         if device.supports(feature: .nonUniformThreadgroups) {
             dispatch2d(state: state, exactly: size)

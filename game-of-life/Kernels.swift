@@ -78,16 +78,82 @@ final class FillKernel: UnaryImageKernel {
     }
 }
 
+extension Bool: ExpressibleByIntegerLiteral {
+    public typealias IntegerLiteralType = Int
+
+    public init(integerLiteral value: Int) {
+        self = !(value == 0)
+    }
+}
+
+typealias Grid = [[Int32]]
 final class GOLKernel: UnaryImageKernel {
     override class var kernelName: String {
         "gol"
     }
     
+    let grid: Grid = .moore1
+    private lazy var flatGrid = grid.reduce(Grid.Element()) { $0 + $1 }
+    lazy var liveActivations: [vector_float4] = .seedsLiveActivations(gridLength: grid.length)
+    lazy var deadActivations: [vector_float4] = .seedsDeadActivations(gridLength: grid.length)
+    
     override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         encoder.set(textures: [sourceTexture, destinationTexture])
+        let gridHeight = grid.count
+        let gridWidth = grid[0].count
+        var gridDim = vector_int2(x: Int32(gridWidth), y: Int32(gridHeight))
+        var flatGrid = grid.reduce([Int32]()) { $0 + $1 }
+        let gridLength = MemoryLayout.stride(ofValue: flatGrid[0]) * flatGrid.count
+        encoder.setBytes(&flatGrid, length: gridLength, index: 0)
+        encoder.set(value: &gridDim, index: 1)
+        encoder.set(array: &liveActivations, index: 2)
+        encoder.set(array: &deadActivations, index: 3)
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
         encoder.endEncoding()
+    }
+}
+
+extension Grid {
+    
+    var length: Int {
+        count * self[0].count
+    }
+    
+    static var moore1: Grid {
+        [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1],
+        ]
+    }
+    
+    static var moore2: Grid {
+        [
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+        ]
+    }
+    
+    static var vonNeumann1: Grid {
+        [
+            [0, 1, 0],
+            [1, 0, 1],
+            [0, 1, 0],
+        ]
+    }
+    
+    static var vonNeumann2: Grid {
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
     }
 }
 
@@ -150,15 +216,44 @@ extension Rule {
             (0b001, f4(1, 0, 1))
         ], 3)
     }
+    
+    static func convayLiveActivations(gridLength: Int) -> Rule {
+        rule([
+            (2, f4(1,0,0)),
+            (3, f4(0,1,0))
+        ], gridLength)
+    }
+
+    static func convayDeadActivations(gridLength: Int) -> Rule {
+        rule([
+            (3, f4(0,0,1))
+        ], gridLength)
+    }
+    
+    static func seedsLiveActivations(gridLength: Int) -> Rule {
+        rule([], gridLength)
+    }
+    
+    static func seedsDeadActivations(gridLength: Int) -> Rule {
+        rule([(2, f4(1,1,1))], gridLength)
+    }
 }
 
 extension Array {
     static func rule(
         _ activations: [(index: Int, color: vector_float4)],
-        _ numberOfBits: Int,
+        nob: Int,
         defaultColor: vector_float4 = vector_float4(x: 0, y: 0, z: 0, w: 1)
     ) -> [vector_float4] {
-        var output = [vector_float4](repeating: defaultColor, count: 1 << numberOfBits)
+        return rule(activations, 1 << nob)
+    }
+
+    static func rule(
+        _ activations: [(index: Int, color: vector_float4)],
+        _ count: Int,
+        defaultColor: vector_float4 = vector_float4(x: 0, y: 0, z: 0, w: 1)
+    ) -> [vector_float4] {
+        var output = [vector_float4](repeating: defaultColor, count: count)
         for (index, color) in activations {
             output[index] = color
         }

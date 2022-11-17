@@ -86,6 +86,7 @@ class CommonViewController: UIViewController {
     }
     
     override func viewDidLoad() {
+        _ = arenaSize
         super.viewDidLoad()
         
         title = titleText
