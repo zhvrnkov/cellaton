@@ -38,11 +38,10 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
     uint sum = 0;
     int rangeX = gridDim.x / 2;
     int rangeY = gridDim.y / 2;
-#warning iterate over y at first for cache
-    for (int x = -rangeX; x <= rangeX; x++) {
-        int gridX = x + rangeX;
-        for (int y = -rangeY; y <= rangeY; y++) {
+    for (int y = -rangeY; y <= rangeY; y++) {
+        for (int x = -rangeX; x <= rangeX; x++) {
             int gridY = y + rangeY;
+            int gridX = x + rangeX;
             int2 readPosition = int2(pos) + int2(x, y);
             // negative mod positive returns not wrapped result
             readPosition = (readPosition + size) % size;

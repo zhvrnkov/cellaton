@@ -11,13 +11,24 @@ import CoreGraphics
 
 final class GameOfLifeViewController: CommonViewController {
     override var inProgressFPS: Int {
-        30
+        15
     }
     
-    private lazy var gol = GOLKernel(context: context)
+    private let setup: Setup = {
+        return .init(
+            gridType: .moore2,
+            kind: .convay
+        )
+    }()
+    private lazy var gol: GOLKernel = {
+        let kernel = GOLKernel(context: context)
+        let (grid, live, dead) = setup.data
+        kernel.setup(grid: grid, live: live, dead: dead)
+        return kernel
+    }()
     
     override var arenaDimensions: CGSize {
-        .init(width: 512, height: 512)
+        .init(width: 256, height: 256)
     }
     
     override var shouldPreserveSquareCells: Bool {
@@ -30,13 +41,7 @@ final class GameOfLifeViewController: CommonViewController {
         cgContext.setFillColor(.init(gray: 1, alpha: 1))
         var origin = CGPoint(x: cgContext.width / 2 - 1, y: cgContext.height / 2 - 1)
         
-        let grid: [[Int]] = [
-            [0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0],
-        ]
+        let grid: [[Int]] = .threeSquares
         
         fill(grid: grid)
     }
@@ -69,4 +74,119 @@ final class GameOfLifeViewController: CommonViewController {
             }
         }
     }
+}
+
+extension GameOfLifeViewController {
+    struct Setup {
+        enum GridType {
+            case moore1
+            case moore2
+            case vonNeumann1
+            case vonNeumann2
+            
+            var data: Grid {
+                switch self {
+                case .moore1:
+                    return .moore1
+                case .moore2:
+                    return .moore2
+                case .vonNeumann1:
+                    return .vonNeumann1
+                case .vonNeumann2:
+                    return .vonNeumann2
+                }
+            }
+        }
+        
+        enum Kind {
+            case convay
+            case seeds
+            
+            func data(gridLength: Int) -> (Rule, Rule) {
+                switch self {
+                case .convay:
+                    return (.convayLiveActivations(gridLength: gridLength),
+                            .convayDeadActivations(gridLength: gridLength))
+                case .seeds:
+                    return (.seedsLiveActivations(gridLength: gridLength),
+                            .seedsDeadActivations(gridLength: gridLength))
+                }
+            }
+        }
+        
+        let gridType: GridType
+        let kind: Kind
+        
+        var data: (Grid, Rule, Rule) {
+            let grid = gridType.data
+            let rules = kind.data(gridLength: grid.length)
+            return (grid, rules.0, rules.1)
+        }
+    }
+}
+
+extension [[Int]] {
+    static var glider: Self {
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    }
+    
+    static var rPentomino: Self {
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    }
+    
+    static var todd: Self {
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1],
+            [0, 0, 0, 0, 0],
+        ]
+    }
+
+    static var square: Self {
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    }
+    
+    static var pants: Self {
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    }
+    
+    static var threeSquares: Self {
+        [
+            [1, 1, 1, 0, 0, 0, 0],
+            [1, 0, 1, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 1, 0, 1],
+            [0, 0, 0, 0, 1, 1, 1],
+        ]
+    }
+
+
 }

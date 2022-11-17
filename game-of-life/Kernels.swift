@@ -9,26 +9,22 @@ import Foundation
 import MetalPerformanceShaders
 import CoreMedia
 
-class UnaryImageKernel: MPSUnaryImageKernel {
+class UnaryImageKernel {
     class var kernelName: String {
         ""
     }
     let context: MTLContext
     var param: Float = 1.0
     var time: CMTime = .zero
+    var offset: MPSOffset = .init(x: 0, y: 0, z: 0)
     private(set) var prevTexture: MTLTexture?
     private(set) lazy var pipelineState = try! context.makeComputePipelineState(functionName: Self.kernelName)
     
     init(context: MTLContext) {
         self.context = context
-        super.init(device: context.device)
     }
     
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
+    func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         encoder.set(textures: [sourceTexture, destinationTexture])
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
@@ -92,10 +88,16 @@ final class GOLKernel: UnaryImageKernel {
         "gol"
     }
     
-    let grid: Grid = .moore1
+    private(set) var grid: Grid = .moore1
     private lazy var flatGrid = grid.reduce(Grid.Element()) { $0 + $1 }
-    lazy var liveActivations: [vector_float4] = .seedsLiveActivations(gridLength: grid.length)
-    lazy var deadActivations: [vector_float4] = .seedsDeadActivations(gridLength: grid.length)
+    private(set) lazy var liveActivations: Rule = .convayLiveActivations(gridLength: grid.length)
+    private(set) lazy var deadActivations: Rule = .convayDeadActivations(gridLength: grid.length)
+    
+    func setup(grid: Grid, live: Rule, dead: Rule) {
+        self.grid = grid
+        self.liveActivations = live
+        self.deadActivations = dead
+    }
     
     override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
@@ -186,6 +188,10 @@ extension f4 {
     init(_ r: Float, _ g: Float, _ b: Float, _ a: Float = 1.0) {
         self.init(x: r, y: g, z: b, w: a)
     }
+    
+    init(_ gray: Float, _ a: Float = 1.0) {
+        self.init(x: gray, y: gray, z: gray, w: a)
+    }
 }
 
 extension Rule {
@@ -216,17 +222,21 @@ extension Rule {
             (0b001, f4(1, 0, 1))
         ], 3)
     }
+
+    typealias NeibghorsCount = Int
+    typealias State = Int // 0, 1, 2 or 3
+    typealias Ruule = [State: [NeibghorsCount: State]]
     
     static func convayLiveActivations(gridLength: Int) -> Rule {
         rule([
-            (2, f4(1,0,0)),
-            (3, f4(0,1,0))
+            (2, f4(1,1,1)),
+            (3, f4(1,1,1))
         ], gridLength)
     }
 
     static func convayDeadActivations(gridLength: Int) -> Rule {
         rule([
-            (3, f4(0,0,1))
+            (3, f4(1,1,1))
         ], gridLength)
     }
     
