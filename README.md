@@ -12,7 +12,7 @@ https://conwaylife.com/wiki/List_of_Life-like_cellular_automata
 http://www.radicaleye.com/lifepage/picgloss/picgloss.html list of Convay's gol patterns
 
 # TODO
-[ ] - wire world https://en.wikipedia.org/wiki/Wireworld
+[x] - wire world https://en.wikipedia.org/wiki/Wireworld
 [ ] - gasatomato://en.wikipedia.org/wiki/Lattice_gas_automaton 
 [ ] - ant https://en.wikipedia.org/wiki/Langton%27s_ant
 [ ] - smooth gol https://www.youtube.com/watch?v=8wDSQxmAyTw&ab_channel=NeatAI

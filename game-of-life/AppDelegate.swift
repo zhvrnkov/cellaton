@@ -23,10 +23,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             ConvayViewController.self,
             SeedsViewController.self,
             BriansBrainViewController.self,
-            WireWorldViewController.self
+            WireWorldViewController.self,
+            LongtonAntViewController.self
         ])
         let navigationController = UINavigationController(rootViewController: menu)
-        navigationController.pushViewController(WireWorldViewController(), animated: false)
+        navigationController.pushViewController(LongtonAntViewController(), animated: false)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
         return true

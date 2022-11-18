@@ -51,9 +51,14 @@ final class CopyKernel: UnaryImageKernel {
         "copy"
     }
     
+    var zoomScale: Float = 1.0
+    var zoomTarget: vector_float2 = .zero
+    
     override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         encoder.set(textures: [sourceTexture, destinationTexture])
+        encoder.set(value: &zoomScale, index: 0)
+        encoder.set(value: &zoomTarget, index: 1)
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
         encoder.endEncoding()
     }
@@ -96,7 +101,9 @@ final class GOLKernel: UnaryImageKernel {
     
     func setup(grid: Grid, rules: GOLRule, stateToDelta: StateToDeltaTable) {
         self.grid = grid
+        self.flatGrid = grid.reduce(Grid.Element()) { $0 + $1 }
         self.rules = rules
+        self.flatRules = rules.reduce(GOLRule.Element()) { $0 + $1 }
         self.stateToDelta = stateToDelta
     }
     

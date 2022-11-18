@@ -10,11 +10,16 @@ using namespace metal;
 
 kernel void copy(texture2d<float, access::sample> source [[ texture(0) ]],
                  texture2d<float, access::write> destination [[ texture(1) ]],
+                 constant const float& zoomScale [[ buffer(0) ]],
+                 constant const float2& zoomTarget [[ buffer(1) ]],
                  uint2 pos [[ thread_position_in_grid ]]) {
 #warning "can we do read?"
     constexpr sampler s(filter::nearest);
     const float2 uv = float2(pos) / float2(destination.get_width(), destination.get_height());
-    destination.write(float4(source.sample(s, uv)), pos);
+    const float2 zoomTargetXY = fma(zoomTarget, 2, -1);
+    const float2 xy = (fma(uv, 2, -1) + zoomTargetXY) * pow(zoomScale, 2);
+    const float2 scaledUV = fma(xy, 0.5, 0.5);
+    destination.write(float4(source.sample(s, scaledUV)), pos);
 }
 
 kernel void fill(texture2d<float, access::write> destination [[ texture(0) ]],

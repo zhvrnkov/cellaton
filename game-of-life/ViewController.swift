@@ -67,6 +67,13 @@ class CommonViewController: UIViewController {
         view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tap)))
         view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(longPress)))
         view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(pan)))
+        view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinch)))
+        
+        let scrollWheelGesture = UIPanGestureRecognizer(target: self, action: #selector(scrollWheel(gesture:)))
+        scrollWheelGesture.allowedScrollTypesMask = .all
+        scrollWheelGesture.maximumNumberOfTouches = 0
+        view.addGestureRecognizer(scrollWheelGesture)
+        view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinch)))
         return view
     }()
     private lazy var copy = CopyKernel(context: context)
@@ -171,6 +178,7 @@ class CommonViewController: UIViewController {
             var tapColor: UInt32 = 0
             texture.getBytes(&tapColor, bytesPerRow: texture.bufferBytesPerRow, from: MTLRegion(origin: MTLOrigin(x: x, y: y, z: 0), size: .init(width: 1, height: 1, depth: 1)), mipmapLevel: 0)
             #warning("idk why, but we should reverse bytes")
+            #warning("we can write to texture directly here")
             tapColor = tapColor.cgColor.uint32r
             if tapColor == colors[colorIndex].uint32 {
                 colorIndex += 1
@@ -198,6 +206,36 @@ class CommonViewController: UIViewController {
         let tapLocation = arenaLocation(from: gesture.location(in: mtkView))
         cgContext.setFillColor(colors[colorIndex])
         cgContext.fill(CGRect(origin: tapLocation, size: .init(width: 1, height: 1)))
+    }
+    
+    @objc private func pinch(gesture: UIPinchGestureRecognizer) {
+        print(#function, gesture.scale)
+    }
+    
+    private var zoomScale: Float = 1.0
+    private var zoomTarget = vector_float2(x: 0.5, y: 0.5)
+    
+    private func updateZoomScale(zoomIn: Bool) {
+        zoomScale += 0.01 * (zoomIn ? 1 : -1)
+        zoomScale = max(zoomScale, 1)
+    }
+    
+    private func updateZoomTarget(location: CGPoint) {
+        let size = vector_float2(x: .init(view.bounds.width), y: .init(view.bounds.height))
+        let location = vector_float2(x: .init(location.x), y: .init(location.y)) / size
+        let direction = normalize(location - zoomTarget)
+        print(direction)
+        zoomTarget += direction * 0.001
+    }
+    
+    @objc private func scrollWheel(gesture: UIPanGestureRecognizer) {
+        guard gesture.state != .ended else {
+            return
+        }
+//        let delta = gesture.translation(in: view)
+//        let location = gesture.location(in: view)
+//        updateZoomScale(zoomIn: delta.y > 0)
+//        updateZoomTarget(location: location)
     }
     
     private func arenaLocation(from location: CGPoint) -> CGPoint {
@@ -260,6 +298,8 @@ extension CommonViewController: MTKViewDelegate {
         }
 
         let drawableTexture = drawable.texture
+        copy.zoomScale = 1.0 / .init(zoomScale)
+        copy.zoomTarget = .init(x: .init(zoomTarget.x), y: .init(zoomTarget.y))
         copy.encode(commandBuffer: commandBuffer, sourceTexture: texture, destinationTexture: drawableTexture)
         
         commandBuffer.present(drawable)
@@ -352,5 +392,37 @@ extension UInt32 {
     
     var alphaRemoved: Self {
         self & 0xffffff00
+    }
+}
+
+extension MTLTexture {
+    func getRGBA(x: Int, y: Int) -> UInt32 {
+        guard x < width, y < height else {
+            return 0
+        }
+        var rgba: UInt32 = 0
+        getBytes(
+            &rgba,
+            bytesPerRow: bufferBytesPerRow,
+            from: pixelRegion(x: x, y: y),
+            mipmapLevel: 0)
+        return rgba
+    }
+    
+    func write(rgba: UInt32, x: Int, y: Int) {
+        guard x < width, y < height else {
+            return
+        }
+        var rgba = rgba
+        replace(
+            region: pixelRegion(x: x, y: y),
+            mipmapLevel: 0,
+            withBytes: &rgba,
+            bytesPerRow: bufferBytesPerRow
+        )
+    }
+    
+    private func pixelRegion(x: Int, y: Int) -> MTLRegion {
+        MTLRegion(origin: .init(x: x, y: y, z: 0), size: .init(width: 1, height: 1, depth: 1))
     }
 }
