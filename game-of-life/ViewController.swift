@@ -31,6 +31,11 @@ class CommonViewController: UIViewController {
         return true
     }
     
+    var colorIndex: Int = 0
+    var colors: [CGColor] {
+        [.white, .black]
+    }
+    
     private lazy var arenaSize: (width: Int, height: Int) = {
         var output = (width: Int(arenaDimensions.width), height: Int(arenaDimensions.height))
         guard shouldPreserveSquareCells else {
@@ -69,7 +74,7 @@ class CommonViewController: UIViewController {
     
     private(set) var cgContext: CGContext!
     private var buffer: MTLBuffer!
-    private var texture: MTLTexture!
+    private(set) var texture: MTLTexture!
     
     private var preferredFPS: Int {
         isGamePaused ? pausedFPS : inProgressFPS
@@ -110,7 +115,6 @@ class CommonViewController: UIViewController {
         let dataSize = aligned(size: bytesPerRow * height, align: pagesize)
         var data: UnsafeMutableRawPointer?
         posix_memalign(&data, pagesize, dataSize)
-        memset(data, 0, dataSize)
         
         self.cgContext = CGContext(
             data: data,
@@ -123,8 +127,8 @@ class CommonViewController: UIViewController {
         )
         cgContext.scaleBy(x: 1.0, y: -1.0)
         cgContext.translateBy(x: 0, y: -CGFloat(cgContext.height))
-        
-        cgContext.setFillColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+        cgContext.setFillColor(colors.last!)
+        cgContext.fill(CGRect(origin: .zero, size: .init(width: cgContext.width, height: cgContext.height)))
         
         self.buffer = context.device.makeBuffer(
             bytesNoCopy: cgContext.data!,
@@ -147,13 +151,6 @@ class CommonViewController: UIViewController {
             offset: 0,
             bytesPerRow: cgContext.bytesPerRow
         )
-        
-//        cgContext.setFillColor(CGColor(gray: 1.0, alpha: 1))
-//        cgContext.fill(CGRect(origin: .init(x: cgContext.width / 2 - 1, y: 0), size: .init(width: 1, height: 1)))
-//        for x in 0..<cgContext.width {
-//            cgContext.setFillColor(CGColor(gray: Bool.random() ? 1.0 : 0, alpha: 1.0))
-//            cgContext.fill(CGRect(origin: .init(x: x, y: 0), size: .init(width: 1, height: 1)))
-//        }
     }
     
     override func viewDidLayoutSubviews() {
@@ -171,10 +168,19 @@ class CommonViewController: UIViewController {
         let color: CGColor = {
             let x = Int(tapLocation.x)
             let y = Int(tapLocation.y)
-            var value: UInt8 = 0
-            texture.getBytes(&value, bytesPerRow: texture.bufferBytesPerRow, from: MTLRegion(origin: MTLOrigin(x: x, y: y, z: 0), size: .init(width: 1, height: 1, depth: 1)), mipmapLevel: 0)
-            let isLive = value > 0
-            return CGColor(gray: isLive ? 0 : 1, alpha: 1)
+            var tapColor: UInt32 = 0
+            texture.getBytes(&tapColor, bytesPerRow: texture.bufferBytesPerRow, from: MTLRegion(origin: MTLOrigin(x: x, y: y, z: 0), size: .init(width: 1, height: 1, depth: 1)), mipmapLevel: 0)
+            #warning("idk why, but we should reverse bytes")
+            tapColor = tapColor.cgColor.uint32r
+            if tapColor == colors[colorIndex].uint32 {
+                colorIndex += 1
+                colorIndex %= colors.count
+                return colors[colorIndex]
+            }
+            else {
+                print(colorIndex)
+                return colors[colorIndex]
+            }
         }()
         
         cgContext.setFillColor(color)
@@ -190,7 +196,7 @@ class CommonViewController: UIViewController {
     
     @objc private func pan(gesture: UIPanGestureRecognizer) {
         let tapLocation = arenaLocation(from: gesture.location(in: mtkView))
-        cgContext.setFillColor(CGColor(gray: 1, alpha: 1))
+        cgContext.setFillColor(colors[colorIndex])
         cgContext.fill(CGRect(origin: tapLocation, size: .init(width: 1, height: 1)))
     }
     
@@ -208,8 +214,7 @@ class CommonViewController: UIViewController {
     private func fillArenaWithRandoms() {
         for x in 0..<arenaSize.width {
             for y in 0..<arenaSize.height {
-                let color = CGColor(gray: Bool.random() ? 1 : 0, alpha: 1)
-                cgContext.setFillColor(color)
+                cgContext.setFillColor(colors.randomElement()!)
                 cgContext.fill(CGRect(origin: .init(x: x, y: y), size: .init(width: 1, height: 1)))
             }
         }
@@ -286,5 +291,66 @@ extension UIEdgeInsets {
 extension CGContext {
     func fillPixel(at location: CGPoint) {
         fill(CGRect(origin: location, size: .init(width: 1, height: 1)))
+    }
+}
+
+extension CGColor {
+    var uint32: UInt32 {
+        guard let components,
+              components.count == 4 else {
+            fatalError()
+        }
+        let red =   UInt32(components[0].rounded()) * 0xff
+        let green = UInt32(components[1].rounded()) * 0xff
+        let blue =  UInt32(components[2].rounded()) * 0xff
+        let alpha = UInt32(components[3].rounded()) * 0xff
+        
+        return (red << 24) | (green << 16) | (blue << 8) | (alpha << 0)
+    }
+    
+    var uint32r: UInt32 {
+        guard let components,
+              components.count == 4 else {
+            fatalError()
+        }
+        let red =   UInt32(components[3].rounded()) * 0xff
+        let green = UInt32(components[2].rounded()) * 0xff
+        let blue =  UInt32(components[1].rounded()) * 0xff
+        let alpha = UInt32(components[0].rounded()) * 0xff
+        
+        return (red << 24) | (green << 16) | (blue << 8) | (alpha << 0)
+    }
+    
+    static var white: CGColor {
+        .init(red: 1, green: 1, blue: 1, alpha: 1)
+    }
+    static var black: CGColor {
+        .init(red: 0, green: 0, blue: 0, alpha: 1)
+    }
+    static var red: CGColor {
+        .init(red: 1, green: 0, blue: 0, alpha: 1)
+    }
+    static var yellow: CGColor {
+        .init(red: 1, green: 1, blue: 0, alpha: 1)
+    }
+    static var blue: CGColor {
+        .init(red: 0, green: 0, blue: 1, alpha: 1)
+    }
+    static var green: CGColor {
+        .init(red: 0, green: 1, blue: 1, alpha: 1)
+    }
+}
+
+extension UInt32 {
+    var cgColor: CGColor {
+        let r = CGFloat((self >> 24) & 0xff) / 0xff
+        let g = CGFloat((self >> 16) & 0xff) / 0xff
+        let b = CGFloat((self >> 8) & 0xff) / 0xff
+        let a = CGFloat((self >> 0) & 0xff) / 0xff
+        return .init(red: r, green: g, blue: b, alpha: a)
+    }
+    
+    var alphaRemoved: Self {
+        self & 0xffffff00
     }
 }

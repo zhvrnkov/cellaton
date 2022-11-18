@@ -80,6 +80,14 @@ extension Shape {
             }
         }
     }
+    
+    static func solidShape(width: Int, height: Int) -> Self {
+        (0..<height).map { _ in
+            (0..<width).map { _ in
+                1
+            }
+        }
+    }
 }
 
 extension CGContext {

@@ -24,19 +24,24 @@ kernel void fill(texture2d<float, access::write> destination [[ texture(0) ]],
     destination.write(float4(colors[(pos.x + pos.y) % 10]), pos);
 }
 
+int stateFromColor(float4 c) {
+    const int3 intColor = int3(c.r > 0.5, c.g > 0.5, c.b > 0.5);
+    return intColor[0] << 2 | intColor[1] << 1 | intColor[2] << 0;
+}
+
 kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
                 texture2d<float, access::write> newState [[ texture(1) ]],
                 constant const int* grid [[ buffer(0) ]],
                 constant const int2& gridDim [[ buffer(1) ]],
                 constant const float4* rule [[ buffer(2) ]],
+                constant const int* stateToDelta [[ buffer(3) ]],
                 uint2 pos [[ thread_position_in_grid ]]) {
     
     const int2 size = int2(previousState.get_width(), previousState.get_height());
-    const int3 stateVec = int3(previousState.read(pos).rgb);
-    const int state = stateVec[0] << 2 | stateVec[1] << 1 | stateVec[2] << 0;
+    const int state = stateFromColor(previousState.read(pos));
     const int gridLength = gridDim.x * gridDim.y;
     
-    uint sum = 0;
+    int sum = 0;
     int rangeX = gridDim.x / 2;
     int rangeY = gridDim.y / 2;
     for (int y = -rangeY; y <= rangeY; y++) {
@@ -46,10 +51,10 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
             int2 readPosition = int2(pos) + int2(x, y);
             // negative mod positive returns not wrapped result
             readPosition = (readPosition + size) % size;
-            auto isLive = dot(previousState.read(uint2(readPosition)).rgb, 1.0) == 3;
+            const auto cellState = stateFromColor(previousState.read(uint2(readPosition)));
 #warning counting only white as live
-            auto shouldSum = grid[gridY * gridDim.x + gridX];
-            sum += (shouldSum && isLive) ? 1 : 0;
+            int shouldSum = grid[gridY * gridDim.x + gridX];
+            sum += stateToDelta[cellState] * shouldSum;
         }
     }
     
@@ -78,4 +83,32 @@ kernel void row_fill(texture2d<float, access::read_write> destination [[ texture
     
     auto result = activations[lives];
     destination.write(result, uint2(offset.xy) + pos);
+}
+
+bool inRange(float a, float b) {
+    constexpr float eps = 0.01;
+    const float low = b - eps;
+    const float high = b + eps;
+    return a > low && a < high;
+}
+
+kernel void copyTexture(texture2d<float, access::read> source,
+                        texture2d<float, access::write> destiation,
+                        uint2 pos [[ thread_position_in_grid ]]) {
+    auto pixel = source.read(pos);
+    
+    if (inRange(pixel.r, 1) && inRange(pixel.g, 0.2156) && inRange(pixel.b, 0)) {
+        // conductor
+        pixel = float4(1.0, 1.0, 0, 1.0);
+    }
+    else if (inRange(pixel.r, 1) && inRange(pixel.g, 1) && inRange(pixel.b, 1)) {
+        // head
+        pixel = float4(0, 0, 1.0, 1.0);
+    }
+    else if (inRange(pixel.r, 0) && inRange(pixel.g, 0.2156) && inRange(pixel.b, 1)) {
+        // tail
+        pixel = float4(1.0, 0, 0, 1.0);
+    }
+    
+    destiation.write(pixel, pos);
 }

@@ -22,6 +22,31 @@ extension f4 {
     }
 }
 
+typealias StateToDeltaTable = [Int32]
+extension StateToDeltaTable {
+    static var liveDeadStateToDelta: Self {
+        let liveState = 0b111
+        let deadState = 0b000
+        var output = Self(repeating: 0, count: 1<<3)
+        output[liveState] = 1
+        output[deadState] = 0
+        return output
+    }
+    
+    static var wireWorldStateToDelta: Self {
+        let empty =     0b000
+        let eHead =     0b001
+        let eTail =     0b100
+        let conductor = 0b110
+        var output = Self(repeating: 0, count: 1<<3)
+        output[empty] = 0
+        output[eHead] = 1
+        output[eTail] = 0
+        output[conductor] = 0
+        return output
+    }
+}
+
 extension GOLRule {
     
     static func convay(gridLength: Int) -> Self {
@@ -79,6 +104,25 @@ extension GOLRule {
         output[deadState] = deadRule
         output[dyingState] = dyingRule
         output[liveState] = liveRule
+        
+        return output
+    }
+    
+    static func wireWorld(gridLength: Int) -> Self {
+        let empty =     0b000
+        let eHead =     0b001
+        let eTail =     0b100
+        let conductor = 0b110
+        var output = golRule(gridLength: gridLength)
+        
+        output[empty] = rule(states: [], defaultState: empty, count: gridLength)
+        output[eHead] = rule(states: [], defaultState: eTail, count: gridLength)
+        output[eTail] = rule(states: [], defaultState: conductor, count: gridLength)
+        output[conductor] = rule(
+            states: [(1, eHead), (2, eHead)],
+            defaultState: conductor,
+            count: gridLength
+        )
         
         return output
     }

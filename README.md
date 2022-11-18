@@ -9,6 +9,8 @@ https://arxiv.org/pdf/1111.1567.pdf
 
 https://conwaylife.com/wiki/List_of_Life-like_cellular_automata
 
+http://www.radicaleye.com/lifepage/picgloss/picgloss.html list of Convay's gol patterns
+
 # TODO
 [ ] - wire world https://en.wikipedia.org/wiki/Wireworld
 [ ] - gasatomato://en.wikipedia.org/wiki/Lattice_gas_automaton 

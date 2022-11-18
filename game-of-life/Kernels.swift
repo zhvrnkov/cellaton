@@ -92,10 +92,12 @@ final class GOLKernel: UnaryImageKernel {
     private lazy var flatGrid = grid.reduce(Grid.Element()) { $0 + $1 }
     private(set) lazy var rules: GOLRule = .convay(gridLength: grid.length)
     private lazy var flatRules = rules.reduce(GOLRule.Element()) { $0 + $1 }
+    private(set) var stateToDelta: StateToDeltaTable = .liveDeadStateToDelta
     
-    func setup(grid: Grid, rules: GOLRule) {
+    func setup(grid: Grid, rules: GOLRule, stateToDelta: StateToDeltaTable) {
         self.grid = grid
         self.rules = rules
+        self.stateToDelta = stateToDelta
     }
     
     override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
@@ -108,6 +110,7 @@ final class GOLKernel: UnaryImageKernel {
         encoder.set(array: &flatGrid, index: 0)
         encoder.set(value: &gridDim, index: 1)
         encoder.set(array: &flatRules, index: 2)
+        encoder.set(array: &stateToDelta, index: 3)
 
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
         encoder.endEncoding()
@@ -254,4 +257,8 @@ extension Array {
         }
         return output
     }
+}
+
+final class CopyTexture: UnaryImageKernel {
+    override class var kernelName: String { "copyTexture" }
 }
