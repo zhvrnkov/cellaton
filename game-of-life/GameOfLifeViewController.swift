@@ -150,12 +150,36 @@ final class WireWorldViewController: GameOfLifeViewController {
 }
 
 final class LongtonAntViewController: GameOfLifeViewController {
-    override var colors: [CGColor] {
-        [.white, .red, .black]
+    
+    struct Ant {
+        var location: vector_long2
+        var angle: Float
+        var rule: AntRule = .RL
+        
+        var speed: Int = 1
+        
+        mutating func step(texture: MTLTexture) {
+            if location.x < 0 {
+                location.x += texture.width
+            }
+            if location.y < 0 {
+                location.y += texture.height
+            }
+            location.x %= texture.width
+            location.y %= texture.height
+
+            let antPixel = texture.getRGBA(x: location.x, y: location.y)
+            let (newColor, deltaAngle) = rule[antPixel]!
+            texture.write(rgba: newColor, x: location.x, y: location.y)
+            angle += deltaAngle
+
+            let antDirection = vector_long2(x: .init(cos(angle).rounded()), y: .init(sin(angle).rounded()))
+            location = location &+ antDirection
+        }
     }
     
     override var arenaDimensions: CGSize {
-        .init(width: 256, height: 256)
+        .init(width: 1024, height: 1024)
     }
     
     override var inProgressFPS: Int {
@@ -182,46 +206,35 @@ final class LongtonAntViewController: GameOfLifeViewController {
         return (grid, rule, table)
     }
     
-    private lazy var antLocation = vector_long2(x: cgContext.width / 2 - 1, y: cgContext.height / 2 - 1)
-    private lazy var antAngle: Float = .pi
-    
-    
-    private lazy var rule: AntRule = .rule([R,R,L,L,L,R,L,L,L,R,R,R])
-//    private lazy var rule: AntRule = .rule([R, R, L, L])
-    
-    var index: UInt = 0
+    private lazy var ants: [Ant] = {
+        var output = [Ant]()
+        let rule = AntRule.rules.randomElement()!
+        output.append(.init(location: .zero, angle: 0))
+        output.append(.init(location: .init(x: texture.width - 1, y: texture.height - 1), angle: 0))
+        output.append(.init(location: .init(x: texture.width / 2 - 1, y: texture.height / 2 - 1), angle: 0))
+        
+        for index in output.indices {
+            output[index].rule = rule
+            output[index].speed = 100
+        }
+        return output
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        for i in 0..<0 {
-            step()
+        for _ in 0..<0 {
+            for index in ants.indices {
+                ants[index].step(texture: self.texture)
+            }
         }
     }
     
     override func encode(commandBuffer: MTLCommandBuffer, previousState: MTLTexture, newState: MTLTexture) {
-        for _ in 0..<10 {
-            step(texture: newState)
+        for index in ants.indices {
+            for _ in 0..<ants[index].speed {
+                ants[index].step(texture: newState)
+            }
         }
-    }
-    
-    private func step(texture: MTLTexture? = nil) {
-        let texture = texture ?? self.texture!
-        if antLocation.x < 0 {
-            antLocation.x += texture.width
-        }
-        if antLocation.y < 0 {
-            antLocation.y += texture.height
-        }
-        antLocation.x %= texture.width
-        antLocation.y %= texture.height
-
-        let antPixel = texture.getRGBA(x: antLocation.x, y: antLocation.y)
-        let (newColor, deltaAngle) = rule[antPixel]!
-        texture.write(rgba: newColor, x: antLocation.x, y: antLocation.y)
-        antAngle += deltaAngle
-
-        let antDirection = vector_long2(x: .init(cos(antAngle).rounded()), y: .init(sin(antAngle).rounded()))
-        antLocation = antLocation &+ antDirection
     }
 }
 
@@ -257,6 +270,11 @@ let L = Float.pi / 2
 let N = Float(0)
 
 extension AntRule {
+    
+    static var rules: [Self] {
+        [RL, RRL, RLR, LLRR, LRRRRRLLR, LLRRRLRLRLLR, RRLLLRLLLRRR]
+    }
+    
     static var RL: Self = .rule([R, L])
     
     static var RRL: Self {
@@ -267,6 +285,10 @@ extension AntRule {
         ]
     }
     
+    static var RLR: Self {
+        rule([R, L, R])
+    }
+    
     static var LLRR: Self {
         [
             white: (purple, R),
@@ -274,6 +296,18 @@ extension AntRule {
             bluegre: (black, L),
             black: (white, L),
         ]
+    }
+    
+    static var LRRRRRLLR: Self {
+        rule([L,R,R,R,R,R,L,L,R])
+    }
+    
+    static var LLRRRLRLRLLR: Self {
+        rule([L,L,R,R,R,L,R,L,R,L,L,R])
+    }
+    
+    static var RRLLLRLLLRRR: Self {
+        rule([R,R,L,L,L,R,L,L,L,R,R,R])
     }
     
     static func rule(_ angles: [Float]) -> Self {
