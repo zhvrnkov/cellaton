@@ -11,7 +11,7 @@ import CoreGraphics
 
 final class GameOfLifeViewController: CommonViewController {
     override var inProgressFPS: Int {
-        15
+        60
     }
     
     private let setup: Setup = {
@@ -28,7 +28,7 @@ final class GameOfLifeViewController: CommonViewController {
     }()
     
     override var arenaDimensions: CGSize {
-        .init(width: 1024, height: 1024)
+        .init(width: 4096, height: 4096)
     }
     
     override var shouldPreserveSquareCells: Bool {
@@ -42,28 +42,24 @@ final class GameOfLifeViewController: CommonViewController {
         var origin = CGPoint(x: cgContext.width / 2 - 1, y: cgContext.height / 2 - 1)
         
 //        var grid: [[Int]] = [
-//            [1, 0, 0, 0, 1],
+//            [0, 0, 0, 0, 0],
 //            [0, 1, 1, 0, 0],
-//            [0, 1, 1, 1, 0],
-//            [0, 0, 1, 1, 0],
-//            [1, 0, 0, 0, 1],
+//            [0, 1, 1, 0, 0],
+//            [0, 0, 0, 0, 0],
+//            [0, 0, 0, 0, 0],
 //        ]
-//        fill(grid: grid)
+//        cgContext.fill(shape: grid, color: CGColor(gray: 1, alpha: 1))
 //        grid = [
-//            [0, 1, 0, 0, 0],
-//            [1, 0, 0, 1, 1],
-//            [1, 0, 0, 0, 0],
 //            [0, 0, 1, 0, 0],
+//            [1, 0, 0, 0, 0],
+//            [0, 0, 0, 1, 0],
 //            [0, 1, 0, 0, 0],
+//            [0, 0, 0, 0, 0],
 //        ]
-//        fill(grid: grid, color: CGColor(red: 0, green: 0, blue: 1, alpha: 1))
-        let count = cgContext.height
-        var grid: [[Int]] = (0..<count).map { _ in
-            (0..<count).map { _ in
-                Bool.random() ? 1 : 0
-            }
-        }
-        fill(grid: grid)
+//        cgContext.fill(shape: grid, color: CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+        let count = 111
+        cgContext.fill(shape: .randomShape(width: count, height: count))
+//        cgContext.fill(shape: .pants)
     }
     
     override func encode(
@@ -76,25 +72,6 @@ final class GameOfLifeViewController: CommonViewController {
             sourceTexture: previousState,
             destinationTexture: newState
         )
-    }
-    
-    private func fill(grid: [[Int]], center: CGPoint? = nil, color: CGColor = CGColor(gray: 1, alpha: 1)) {
-        let center = center ?? CGPoint(x: cgContext.width / 2 - 1, y: cgContext.height / 2 - 1)
-        let rangeY = grid.count / 2
-        let rangeX = grid[0].count / 2
-        
-        for y in -rangeY...rangeY {
-            let lookY = y + rangeY
-            for x in -rangeX...rangeX {
-                let lookX = x + rangeX
-                let point = CGPoint(x: Int(center.x) + x, y: Int(center.y) + y)
-//                let color = grid[lookY][lookX] == 0 ? CGColor(gray: 0, alpha: 1) : color
-                if (grid[lookY][lookX] == 0) == false {
-                    cgContext.setFillColor(color)
-                    cgContext.fillPixel(at: point)
-                }
-            }
-        }
     }
 }
 
@@ -148,68 +125,4 @@ extension GameOfLifeViewController {
     }
 }
 
-extension [[Int]] {
-    static var glider: Self {
-        [
-            [0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0],
-        ]
-    }
-    
-    static var rPentomino: Self {
-        [
-            [0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0],
-        ]
-    }
-    
-    static var todd: Self {
-        [
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1],
-            [0, 0, 0, 0, 0],
-        ]
-    }
 
-    static var square: Self {
-        [
-            [0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 0],
-            [0, 1, 0, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0],
-        ]
-    }
-    
-    static var pants: Self {
-        [
-            [0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 0],
-            [0, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0],
-            [0, 0, 0, 0, 0],
-        ]
-    }
-    
-    static var threeSquares: Self {
-        [
-            [1, 1, 1, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 1, 0, 1, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1],
-            [0, 0, 0, 0, 1, 0, 1],
-            [0, 0, 0, 0, 1, 1, 1],
-        ]
-    }
-
-
-}

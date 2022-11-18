@@ -32,7 +32,8 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
                 uint2 pos [[ thread_position_in_grid ]]) {
     
     const int2 size = int2(previousState.get_width(), previousState.get_height());
-    const int state = int(dot(previousState.read(pos).rgb, 1.0));
+    const int3 stateVec = int3(previousState.read(pos).rgb);
+    const int state = stateVec[0] << 2 | stateVec[1] << 1 | stateVec[2] << 0;
     const int gridLength = gridDim.x * gridDim.y;
     
     uint sum = 0;
@@ -44,7 +45,7 @@ kernel void gol(texture2d<float, access::read> previousState [[ texture(0) ]],
             int gridX = x + rangeX;
             int2 readPosition = int2(pos) + int2(x, y);
             // negative mod positive returns not wrapped result
-//            readPosition = (readPosition + size) % size;
+            readPosition = (readPosition + size) % size;
             auto isLive = dot(previousState.read(uint2(readPosition)).rgb, 1.0) == 3;
 #warning counting only white as live
             auto shouldSum = grid[gridY * gridDim.x + gridX];

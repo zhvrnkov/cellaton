@@ -192,54 +192,6 @@ extension f4 {
     }
 }
 
-// State = ColorComponentsSum = 0, 1, 2, 3
-// NeibghorsCount = Int
-// Color = f4 = vector_float4
-typealias GOLRule = [[f4]] // [State: [NeibghorsCount: Color]]
-
-extension GOLRule {
-    static func convay(gridLength: Int) -> Self {
-        var output = golRule(gridLength: gridLength)
-        let deadRule = rule([(3, f4(1,1,1))], gridLength)
-        let liveRule = rule([(2, f4(1,1,1)), (3, f4(1,1,1))], gridLength)
-
-        output[0] = deadRule
-        output[3] = liveRule
-        
-        return output
-    }
-    
-    static func seeds(gridLength: Int) -> Self {
-        var output = golRule(gridLength: gridLength)
-        let liveRule = rule([], gridLength)
-        let deadRule = rule([(2, f4(1,1,1))], gridLength)
-        
-        output[0] = deadRule
-        output[3] = liveRule
-        
-        return output
-    }
-    
-    static func brianBrain(gridLength: Int) -> Self {
-        var output = golRule(gridLength: gridLength)
-        
-        let liveRule = rule([], gridLength, defaultColor: f4(0, 0, 1))
-        let dyingRule = rule([], gridLength)
-        let deadRule = rule([(2, f4(1,1,1))], gridLength)
-        
-        output[0] = deadRule
-        output[1] = dyingRule
-        output[3] = liveRule
-        
-        return output
-    }
-    
-    static func golRule(gridLength: Int) -> Self {
-        let states: [Int] = [0, 1, 2, 3]
-        return [[f4]](repeating: rule([], gridLength), count: states.count)
-    }
-}
-
 extension Rule {
     static var rule90: Rule {
         rule([
@@ -277,6 +229,18 @@ extension Array {
         defaultColor: vector_float4 = vector_float4(x: 0, y: 0, z: 0, w: 1)
     ) -> [vector_float4] {
         return rule(activations, 1 << nob)
+    }
+
+    static func rule(
+        states: [(index: Int, state: Int)],
+        defaultState: Int = 0b000,
+        count: Int
+    ) -> [vector_float4] {
+        let activations = states.map { (index, state) in
+            (index, f4(int: state))
+        }
+        let defaultColor = f4(int: defaultState)
+        return rule(activations, count, defaultColor: defaultColor)
     }
 
     static func rule(

@@ -17,6 +17,8 @@
 		AD812E9E29267EAE00C2F028 /* GameOfLifeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812E9D29267EAE00C2F028 /* GameOfLifeViewController.swift */; };
 		AD812EA02926802900C2F028 /* MenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812E9F2926802900C2F028 /* MenuViewController.swift */; };
 		AD812EA2292680DF00C2F028 /* RuleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EA1292680DF00C2F028 /* RuleViewController.swift */; };
+		AD812EA42927777900C2F028 /* Shapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EA32927777900C2F028 /* Shapes.swift */; };
+		AD812EA62927870B00C2F028 /* GOLRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EA52927870B00C2F028 /* GOLRule.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +34,8 @@
 		AD812E9D29267EAE00C2F028 /* GameOfLifeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOfLifeViewController.swift; sourceTree = "<group>"; };
 		AD812E9F2926802900C2F028 /* MenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuViewController.swift; sourceTree = "<group>"; };
 		AD812EA1292680DF00C2F028 /* RuleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleViewController.swift; sourceTree = "<group>"; };
+		AD812EA32927777900C2F028 /* Shapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shapes.swift; sourceTree = "<group>"; };
+		AD812EA52927870B00C2F028 /* GOLRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GOLRule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +79,8 @@
 				AD812E9D29267EAE00C2F028 /* GameOfLifeViewController.swift */,
 				AD812E9F2926802900C2F028 /* MenuViewController.swift */,
 				AD812EA1292680DF00C2F028 /* RuleViewController.swift */,
+				AD812EA32927777900C2F028 /* Shapes.swift */,
+				AD812EA52927870B00C2F028 /* GOLRule.swift */,
 			);
 			path = "game-of-life";
 			sourceTree = "<group>";
@@ -149,8 +155,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD812EA62927870B00C2F028 /* GOLRule.swift in Sources */,
 				AD812EA02926802900C2F028 /* MenuViewController.swift in Sources */,
 				AD295C962924111700D79B1C /* ViewController.swift in Sources */,
+				AD812EA42927777900C2F028 /* Shapes.swift in Sources */,
 				AD295CA62924112200D79B1C /* MTLContext.swift in Sources */,
 				AD295CAA292411DE00D79B1C /* Kernels.swift in Sources */,
 				AD295C922924111700D79B1C /* AppDelegate.swift in Sources */,
