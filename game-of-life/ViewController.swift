@@ -36,6 +36,10 @@ class CommonViewController: UIViewController {
         [.white, .black]
     }
     
+    var texturePixelFormat: MTLPixelFormat {
+        .rgba8Unorm
+    }
+    
     private lazy var arenaSize: (width: Int, height: Int) = {
         var output = (width: Int(arenaDimensions.width), height: Int(arenaDimensions.height))
         guard shouldPreserveSquareCells else {
@@ -76,7 +80,7 @@ class CommonViewController: UIViewController {
         view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinch)))
         return view
     }()
-    private lazy var copy = CopyKernel(context: context)
+    private(set) lazy var copy = CopyKernel(context: context)
     private lazy var fill = FillKernel(context: context)
     
     private(set) var cgContext: CGContext!
@@ -87,7 +91,7 @@ class CommonViewController: UIViewController {
         isGamePaused ? pausedFPS : inProgressFPS
     }
     
-    private var isGamePaused = true {
+    private(set) var isGamePaused = true {
         didSet {
             mtkView.preferredFramesPerSecond = preferredFPS
             title = titleText
@@ -134,8 +138,7 @@ class CommonViewController: UIViewController {
         )
         cgContext.scaleBy(x: 1.0, y: -1.0)
         cgContext.translateBy(x: 0, y: -CGFloat(cgContext.height))
-        cgContext.setFillColor(colors.last!)
-        cgContext.fill(CGRect(origin: .zero, size: .init(width: cgContext.width, height: cgContext.height)))
+        fill(cgContext: cgContext, dataSize: dataSize)
         
         self.buffer = context.device.makeBuffer(
             bytesNoCopy: cgContext.data!,
@@ -147,7 +150,7 @@ class CommonViewController: UIViewController {
         )
         
         let textureDescriptor = MTLTextureDescriptor()
-        textureDescriptor.pixelFormat = .rgba8Unorm
+        textureDescriptor.pixelFormat = texturePixelFormat
         textureDescriptor.width = cgContext.width
         textureDescriptor.height = cgContext.height
         textureDescriptor.storageMode = buffer.storageMode
@@ -160,6 +163,11 @@ class CommonViewController: UIViewController {
         )
     }
     
+    func fill(cgContext: CGContext, dataSize: Int) {
+        cgContext.setFillColor(colors.last!)
+        cgContext.fill(CGRect(origin: .zero, size: .init(width: cgContext.width, height: cgContext.height)))
+    }
+    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let bounds = view.safeAreaBounds
@@ -169,16 +177,14 @@ class CommonViewController: UIViewController {
         mtkView.frame.size = bounds.size
     }
     
-    @objc private func tap(gesture: UITapGestureRecognizer) {
-        let tapLocation = arenaLocation(from: gesture.location(in: mtkView))
-        
+    func handleTap(tapLocation: CGPoint) {
         let color: CGColor = {
             let x = Int(tapLocation.x)
             let y = Int(tapLocation.y)
             var tapColor: UInt32 = 0
             texture.getBytes(&tapColor, bytesPerRow: texture.bufferBytesPerRow, from: MTLRegion(origin: MTLOrigin(x: x, y: y, z: 0), size: .init(width: 1, height: 1, depth: 1)), mipmapLevel: 0)
-            #warning("idk why, but we should reverse bytes")
-            #warning("we can write to texture directly here")
+#warning("idk why, but we should reverse bytes")
+#warning("we can write to texture directly here")
             tapColor = tapColor.cgColor.uint32r
             if tapColor == colors[colorIndex].uint32 {
                 colorIndex += 1
@@ -195,6 +201,16 @@ class CommonViewController: UIViewController {
         cgContext.fill(CGRect(origin: tapLocation, size: .init(width: 1, height: 1)))
     }
     
+    func handlePan(location: CGPoint) {
+        cgContext.setFillColor(colors[colorIndex])
+        cgContext.fill(CGRect(origin: location, size: .init(width: 1, height: 1)))
+    }
+    
+    @objc private func tap(gesture: UITapGestureRecognizer) {
+        let tapLocation = arenaLocation(from: gesture.location(in: mtkView))
+        handleTap(tapLocation: tapLocation)
+    }
+    
     @objc private func longPress(gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began else {
             return
@@ -204,16 +220,15 @@ class CommonViewController: UIViewController {
     
     @objc private func pan(gesture: UIPanGestureRecognizer) {
         let tapLocation = arenaLocation(from: gesture.location(in: mtkView))
-        cgContext.setFillColor(colors[colorIndex])
-        cgContext.fill(CGRect(origin: tapLocation, size: .init(width: 1, height: 1)))
+        handlePan(location: tapLocation)
     }
     
     @objc private func pinch(gesture: UIPinchGestureRecognizer) {
         print(#function, gesture.scale)
     }
     
-    private var zoomScale: Float = 1.0
-    private var zoomTarget = vector_float2(x: 0.5, y: 0.5)
+    private(set) var zoomScale: Float = 1.0
+    private(set) var zoomTarget = vector_float2(x: 0.5, y: 0.5)
     
     private func updateZoomScale(zoomIn: Bool) {
         zoomScale += 0.01 * (zoomIn ? 1 : -1)
@@ -258,6 +273,28 @@ class CommonViewController: UIViewController {
         }
     }
     
+    func encode(commandBuffer: MTLCommandBuffer, destinationTexture: MTLTexture) {
+        if isGamePaused == false {
+            let tmpImage = MPSTemporaryImage(
+                commandBuffer: commandBuffer,
+                textureDescriptor: texture.temporaryImageDescriptor
+            )
+            defer {
+                tmpImage.readCount = 0
+            }
+            let tmpTexture = tmpImage.texture
+            let blit = commandBuffer.makeBlitCommandEncoder()!
+            blit.copy(from: texture, to: tmpTexture)
+            blit.endEncoding()
+            encode(commandBuffer: commandBuffer, previousState: tmpTexture, newState: texture)
+        }
+
+        copy.zoomScale = 1.0 / .init(zoomScale)
+        copy.zoomTarget = .init(x: .init(zoomTarget.x), y: .init(zoomTarget.y))
+        copy.encode(commandBuffer: commandBuffer, sourceTexture: texture, destinationTexture: destinationTexture)
+
+    }
+    
     func encode(
         commandBuffer: MTLCommandBuffer,
         previousState: MTLTexture,
@@ -278,29 +315,8 @@ extension CommonViewController: MTKViewDelegate {
             print(#function, "NO BUFF AND DRAWABLE")
             return
         }
-        
-        if isGamePaused == false {
-            let tmpImage = MPSTemporaryImage(
-                commandBuffer: commandBuffer,
-                textureDescriptor: texture.temporaryImageDescriptor
-            )
-            defer {
-                tmpImage.readCount = 0
-            }
-            let tmpTexture = tmpImage.texture
-            let blit = commandBuffer.makeBlitCommandEncoder()!
-            blit.copy(from: texture, to: tmpTexture)
-            blit.endEncoding()
-            encode(commandBuffer: commandBuffer, previousState: tmpTexture, newState: texture)
-//            gol.encode(commandBuffer: commandBuffer, sourceTexture: tmpTexture, destinationTexture: texture)
-//            row.offset.y += 1
-//            row.encode(commandBuffer: commandBuffer, destinationTexture: texture)
-        }
-
-        let drawableTexture = drawable.texture
-        copy.zoomScale = 1.0 / .init(zoomScale)
-        copy.zoomTarget = .init(x: .init(zoomTarget.x), y: .init(zoomTarget.y))
-        copy.encode(commandBuffer: commandBuffer, sourceTexture: texture, destinationTexture: drawableTexture)
+        let destinationTexture = drawable.texture
+        encode(commandBuffer: commandBuffer, destinationTexture: destinationTexture)
         
         commandBuffer.present(drawable)
         commandBuffer.commit()

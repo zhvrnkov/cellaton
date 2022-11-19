@@ -86,7 +86,7 @@ final class Rule110ViewController: RuleViewController {
     }
     
     override var initialState: RuleViewController.InitialState {
-        .random
+        .right
     }
     
     override var shouldPreserveSquareCells: Bool {

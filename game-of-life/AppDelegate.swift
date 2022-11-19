@@ -24,10 +24,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             SeedsViewController.self,
             BriansBrainViewController.self,
             WireWorldViewController.self,
-            LongtonAntViewController.self
+            LangtonAntViewController.self,
+            HPPLaticeGasViewController.self
         ])
         let navigationController = UINavigationController(rootViewController: menu)
-        navigationController.pushViewController(LongtonAntViewController(), animated: false)
+        navigationController.pushViewController(HPPLaticeGasViewController(), animated: false)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
         return true

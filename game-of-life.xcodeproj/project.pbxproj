@@ -21,6 +21,8 @@
 		AD812EA62927870B00C2F028 /* GOLRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EA52927870B00C2F028 /* GOLRule.swift */; };
 		AD812EA82927C01800C2F028 /* wireworld.gif in Resources */ = {isa = PBXBuildFile; fileRef = AD812EA72927C01800C2F028 /* wireworld.gif */; };
 		AD812EAA2927D08800C2F028 /* GameOfLifeSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EA92927D08800C2F028 /* GameOfLifeSetup.swift */; };
+		AD812EAD2929209C00C2F028 /* HPPLatticeGasViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EAC2929209C00C2F028 /* HPPLatticeGasViewController.swift */; };
+		AD812EAF292920AC00C2F028 /* LangtonAntViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD812EAE292920AC00C2F028 /* LangtonAntViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +43,8 @@
 		AD812EA72927C01800C2F028 /* wireworld.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = wireworld.gif; sourceTree = "<group>"; };
 		AD812EA92927D08800C2F028 /* GameOfLifeSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOfLifeSetup.swift; sourceTree = "<group>"; };
 		AD812EAB2927E3EE00C2F028 /* game-of-life.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "game-of-life.entitlements"; sourceTree = "<group>"; };
+		AD812EAC2929209C00C2F028 /* HPPLatticeGasViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HPPLatticeGasViewController.swift; sourceTree = "<group>"; };
+		AD812EAE292920AC00C2F028 /* LangtonAntViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LangtonAntViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +93,8 @@
 				AD812EA32927777900C2F028 /* Shapes.swift */,
 				AD812EA52927870B00C2F028 /* GOLRule.swift */,
 				AD812EA92927D08800C2F028 /* GameOfLifeSetup.swift */,
+				AD812EAC2929209C00C2F028 /* HPPLatticeGasViewController.swift */,
+				AD812EAE292920AC00C2F028 /* LangtonAntViewController.swift */,
 			);
 			path = "game-of-life";
 			sourceTree = "<group>";
@@ -168,12 +174,14 @@
 				AD812EA02926802900C2F028 /* MenuViewController.swift in Sources */,
 				AD295C962924111700D79B1C /* ViewController.swift in Sources */,
 				AD812EA42927777900C2F028 /* Shapes.swift in Sources */,
+				AD812EAD2929209C00C2F028 /* HPPLatticeGasViewController.swift in Sources */,
 				AD295CA62924112200D79B1C /* MTLContext.swift in Sources */,
 				AD295CAA292411DE00D79B1C /* Kernels.swift in Sources */,
 				AD295C922924111700D79B1C /* AppDelegate.swift in Sources */,
 				AD812EAA2927D08800C2F028 /* GameOfLifeSetup.swift in Sources */,
 				AD295CA8292411A500D79B1C /* Shaders.metal in Sources */,
 				AD812E9E29267EAE00C2F028 /* GameOfLifeViewController.swift in Sources */,
+				AD812EAF292920AC00C2F028 /* LangtonAntViewController.swift in Sources */,
 				AD812EA2292680DF00C2F028 /* RuleViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
