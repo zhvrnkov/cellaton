@@ -179,18 +179,13 @@ kernel void copyTexture(texture2d<float, access::read> source,
     destiation.write(pixel, pos);
 }
 
-constant constexpr const uint dirsM = 0b111111111111;
+constant constexpr const uint dirsM = 0b01111;
+constant constexpr const uint wall  = 0b10000;
+constant constexpr const uint top   = 0b01000;
+constant constexpr const uint right = 0b00100;
+constant constexpr const uint bot   = 0b00010;
+constant constexpr const uint left  = 0b00001;
 constant constexpr const uint metaM = ~dirsM;
-constant constexpr const uint wall = 0b1 << 12;
-constant constexpr const uint top   = 0b001 << (3 * 3);
-constant constexpr const uint right = 0b011 << (3 * 2);
-constant constexpr const uint bot   = 0b101 << (3 * 1);
-constant constexpr const uint left  = 0b111 << (3 * 0);
-
-constant constexpr const uint topI   = 0b111000000000;
-constant constexpr const uint rightI = 0b000111000000;
-constant constexpr const uint botI   = 0b000000111000;
-constant constexpr const uint leftI  = 0b000000000111;
 
 kernel void latticeGas(texture2d<uint, access::read> sourceTexture,
                        texture2d<uint, access::write> destinationTexture,
@@ -204,10 +199,10 @@ kernel void latticeGas(texture2d<uint, access::read> sourceTexture,
     const uint botP = sourceTexture.read(pos + uint2(0, 1)).r;
     const uint leftP = sourceTexture.read(pos - uint2(1, 0)).r;
     
-    const uint topComming = (topP & botI) == bot ? bot : 0;
-    const uint rightComming = (rightP & leftI) == left ? left : 0;
-    const uint botComming = (botP & topI) == top ? top : 0;
-    const uint leftComming = (leftP & rightI) == right ? right : 0;
+    const uint topComming = (topP & bot);
+    const uint rightComming = (rightP & left);
+    const uint botComming = (botP & top);
+    const uint leftComming = (leftP & right);
     
     const auto sum = (topComming > 0) + (rightComming > 0) + (botComming > 0) + (leftComming > 0);
     if (sum >= 3 && !isWall) {
@@ -248,6 +243,10 @@ kernel void latticeGas(texture2d<uint, access::read> sourceTexture,
             value |= topComming | botComming;
         }
     }
+//    if (isWall) {
+//        // invert last 4 bits
+//        value &= ~(value & dirsM);
+//    }
     
     destinationTexture.write(value, pos);
 }
@@ -275,3 +274,29 @@ kernel void latticeGasToImage(texture2d<uint, access::read> gasTexture,
     const float3 value = isLive ? float3(1.0) : (isWall ? float3(1.0, 1.0, 0) : 0);
     destinationTexture.write(float4(float3(value), 1.0), pos);
 }
+
+//kernel void latticeGasToImageColored(texture2d<uint, access::read> gasTexture,
+//                                     texture2d<float, access::write> destinationTexture,
+//                                     uint2 pos [[ thread_position_in_grid ]]) {
+//    constexpr const float3 colors[5] = {
+//        float3(1.0, 1.0, 1.0),
+//        float3(0.3, 0, 1.0),
+//        float3(0.2, 0, 1.0),
+//        float3(0.1, 0, 1.0),
+//    };
+//    const uint source = gasTexture.read(pos).r;
+//    const float3 topColor   = bool(source & topI) * colors[0];
+//    const float3 rightColor = bool(source & rightI) * colors[1];
+//    const float3 botColor   = bool(source & botI) * colors[1];
+//    const float3 leftColor  = bool(source & leftI) * colors[3];
+//    float3 color = topColor;
+//    color = mix(color, rightColor, bool(source & rightI) * 0.5);
+//    color = mix(color, botColor, bool(source & botI) * 0.5);
+//    color = mix(color, leftColor, bool(source & leftI) * 0.5);
+//    const uint meta = source & metaM;
+//    const uint dirs = source & dirsM;
+//    const bool isLive = dirs > 0;
+//    const bool isWall = meta == wall;
+//    const float3 value = isLive ? color : (isWall ? float3(1.0, 1.0, 0) : 0);
+//    destinationTexture.write(float4(float3(value), 1.0), pos);
+//}

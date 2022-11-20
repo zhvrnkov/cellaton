@@ -10,11 +10,11 @@ import Metal
 import MetalPerformanceShaders
 import AVFoundation
 
-fileprivate let wall: UInt32  = 0b1 << 12
-fileprivate let top: UInt32   = 0b001 << (3 * 3)
-fileprivate let right: UInt32 = 0b011 << (3 * 2)
-fileprivate let bot: UInt32   = 0b101 << (3 * 1)
-fileprivate let left: UInt32  = 0b111 << (3 * 0)
+fileprivate let wall: UInt32  = 0b10000
+//fileprivate let top: UInt32   = 0b001 << (3 * 3)
+//fileprivate let right: UInt32 = 0b011 << (3 * 2)
+//fileprivate let bot: UInt32   = 0b101 << (3 * 1)
+//fileprivate let left: UInt32  = 0b111 << (3 * 0)
 
 final class HPPLaticeGasViewController: CommonViewController {
     
@@ -64,15 +64,15 @@ final class HPPLaticeGasViewController: CommonViewController {
         let high = halfWidth + quarterH
         
         let commandBuffer = context.commandQueue.makeCommandBuffer()!
-        latticeGasFill.percent = 0.5
+        latticeGasFill.percent = 1.0
         latticeGasFill.encode(commandBuffer: commandBuffer, destinationTexture: texture)
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
        
-        let windowWidth = Int(Float(width) * 0.2)
-        let windowHeight = Int(Float(height) * 0.2)
+        let windowWidth = Int(Float(width) * 0.3)
+        let windowHeight = Int(Float(height) * 0.3)
         let windowX = width / 10
-        let windowY = height - windowHeight - height / 10
+        let windowY = height / 10
         
         let regions: [MTLRegion] = [
             MTLRegion(origin: .init(x: 0, y: 0, z: 0), size: .init(width: width, height: 2, depth: 1)), // top
@@ -87,7 +87,10 @@ final class HPPLaticeGasViewController: CommonViewController {
             texture.replace(region: region, mipmapLevel: 0, withBytes: &bytes, bytesPerRow: region.size.width * 4)
         }
         
-        spawnWindow(x: windowX, y: windowY, w: windowWidth, h: windowHeight)
+//        spawnWindow(x: windowX, y: windowY, w: windowWidth, h: windowHeight)
+//        spawnWindow(x: width - windowX - windowWidth, y: windowY, w: windowWidth, h: windowHeight)
+//        spawnWindow(x: width - windowX - windowWidth, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
+        spawnWindow(x: windowX, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
 //
 //        let shieldRegion = MTLRegion(origin: .init(x: width / 2, y: height / 3, z: 0),
 //                                     size: .init(width: 4, height: height / 3, depth: 1))
