@@ -19,7 +19,7 @@ fileprivate let wall: UInt32  = 0b10000
 final class HPPLaticeGasViewController: CommonViewController {
     
     override var inProgressFPS: Int {
-        60
+       60
     }
     
     override var arenaDimensions: CGSize {
@@ -87,10 +87,16 @@ final class HPPLaticeGasViewController: CommonViewController {
             texture.replace(region: region, mipmapLevel: 0, withBytes: &bytes, bytesPerRow: region.size.width * 4)
         }
         
-//        spawnWindow(x: windowX, y: windowY, w: windowWidth, h: windowHeight)
+        texture.write(rgba: 0b1000, x: centerX, y: centerY + 2)
+        texture.write(rgba: 0b0010, x: centerX, y: centerY - 2)
+        texture.write(rgba: 0b0100, x: centerX - 2, y: centerY)
+        texture.write(rgba: 0b0001, x: centerX + 2, y: centerY)
+
+        
+        spawnWindow(x: windowX, y: windowY, w: windowWidth, h: windowHeight)
 //        spawnWindow(x: width - windowX - windowWidth, y: windowY, w: windowWidth, h: windowHeight)
 //        spawnWindow(x: width - windowX - windowWidth, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
-        spawnWindow(x: windowX, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
+//        spawnWindow(x: windowX, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
 //
 //        let shieldRegion = MTLRegion(origin: .init(x: width / 2, y: height / 3, z: 0),
 //                                     size: .init(width: 4, height: height / 3, depth: 1))

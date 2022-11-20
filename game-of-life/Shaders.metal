@@ -204,49 +204,34 @@ kernel void latticeGas(texture2d<uint, access::read> sourceTexture,
     const uint botComming = (botP & top);
     const uint leftComming = (leftP & right);
     
-    const auto sum = (topComming > 0) + (rightComming > 0) + (botComming > 0) + (leftComming > 0);
-    if (sum >= 3 && !isWall) {
-        destinationTexture.write(meta | topComming | rightComming | botComming | leftComming, pos);
-        return;
-    }
-    
+    const bool verticalHeadsOn = (rightComming && leftComming) && !(topComming || botComming);
+    const bool horizontalHeadsOn = (topComming && botComming) && !(rightComming || leftComming);
+    const bool headsOn = verticalHeadsOn || horizontalHeadsOn;
     uint value = meta;
-    if (rightComming && leftComming) {
-        value |= top | bot;
+    if (headsOn) {
+        uint collided = 0;
+        collided |= topComming ? right : 0;
+        collided |= botComming ? left : 0;
+        collided |= rightComming ? top : 0;
+        collided |= leftComming ? bot : 0;
+        
+        value &= ~dirsM;
+        value |= collided;
     }
-    else if (rightComming || leftComming) {
-        if (isWall) {
-            if (rightComming) {
-                value |= right;
-            }
-            else {
-                value |= left;
-            }
-        }
-        else {
-            value |= rightComming | leftComming;
-        }
+    else {
+        value |= topComming | rightComming | botComming | leftComming;
     }
-    if (topComming && botComming) {
-        value |= right | left;
+
+    if (isWall) {
+        uint inverted = 0;
+        inverted |= topComming ? top : 0;
+        inverted |= rightComming ? right : 0;
+        inverted |= botComming ? bot : 0;
+        inverted |= leftComming ? left : 0;
+        
+        value &= ~dirsM;
+        value |= inverted;
     }
-    else if (topComming || botComming) {
-        if (isWall) {
-            if (topComming) {
-                value |= top;
-            }
-            else {
-                value |= bot;
-            }
-        }
-        else {
-            value |= topComming | botComming;
-        }
-    }
-//    if (isWall) {
-//        // invert last 4 bits
-//        value &= ~(value & dirsM);
-//    }
     
     destinationTexture.write(value, pos);
 }
