@@ -51,14 +51,14 @@ final class CopyKernel: UnaryImageKernel {
         "copy"
     }
     
-    var zoomScale: Float = 1.0
-    var zoomTarget: vector_float2 = .zero
+    var cameraMatrix = matrix_float3x3(diagonal: .init(repeating: 1.0))
     
     override func encode(commandBuffer: MTLCommandBuffer, sourceTexture: MTLTexture, destinationTexture: MTLTexture) {
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         encoder.set(textures: [sourceTexture, destinationTexture])
-        encoder.set(value: &zoomScale, index: 0)
-        encoder.set(value: &zoomTarget, index: 1)
+        
+        encoder.set(value: &cameraMatrix, index: 0)
+    
         encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
         encoder.endEncoding()
     }

@@ -28,7 +28,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             HPPLaticeGasViewController.self
         ])
         let navigationController = UINavigationController(rootViewController: menu)
-        navigationController.pushViewController(HPPLaticeGasViewController(), animated: false)
+        navigationController.pushViewController(WireWorldViewController(), animated: false)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
         return true

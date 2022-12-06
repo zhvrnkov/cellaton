@@ -10,7 +10,7 @@ import Metal
 import MetalPerformanceShaders
 import AVFoundation
 
-fileprivate let wall: UInt32  = 0b10000
+fileprivate let wall: UInt32  = 0b100000000
 //fileprivate let top: UInt32   = 0b001 << (3 * 3)
 //fileprivate let right: UInt32 = 0b011 << (3 * 2)
 //fileprivate let bot: UInt32   = 0b101 << (3 * 1)
@@ -39,7 +39,8 @@ final class HPPLaticeGasViewController: CommonViewController {
     }
     
     private lazy var latticeGas = LatticeGasKernel(context: context)
-    private lazy var latticeGasFill = LatticeGasFillKernel(context: context)
+    private lazy var latticeGasFillRect = LatticeGasFillRectKernel(context: context)
+    private lazy var latticeGasFillCircle = LatticeGasFillCircleKernel(context: context)
     private lazy var latticeGas2Image = LaticeGasToImageKernel(context: context)
     
     private lazy var tmpTexture: MTLTexture = {
@@ -64,8 +65,27 @@ final class HPPLaticeGasViewController: CommonViewController {
         let high = halfWidth + quarterH
         
         let commandBuffer = context.commandQueue.makeCommandBuffer()!
-        latticeGasFill.percent = 1.0
-        latticeGasFill.encode(commandBuffer: commandBuffer, destinationTexture: texture)
+        latticeGasFillRect.percent = 0.5
+        latticeGasFillRect.encode(
+            commandBuffer: commandBuffer,
+            destinationTexture: texture,
+            rect: CGRect(origin: .init(x: 0, y: 0), size: .init(width: 1, height: 1))
+        )
+        latticeGasFillCircle.percent = 1.0
+        latticeGasFillCircle.encode(
+            commandBuffer: commandBuffer,
+            destinationTexture: texture,
+            radius: 0.25,
+            center: .init(x: 0.5, y: 0.5)
+        )
+
+        latticeGasFillRect.percent = 1.0
+        latticeGasFillRect.encode(
+            commandBuffer: commandBuffer,
+            destinationTexture: texture,
+            rect: CGRect(origin: .init(x: 0.5 - 0.1, y: 0.5 - 0.1), size: .init(width: 0.2, height: 0.2))
+        )
+        
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
        
@@ -93,7 +113,7 @@ final class HPPLaticeGasViewController: CommonViewController {
         texture.write(rgba: 0b0001, x: centerX + 2, y: centerY)
 
         
-        spawnWindow(x: windowX, y: windowY, w: windowWidth, h: windowHeight)
+//        spawnWindow(x: windowX, y: windowY, w: windowWidth, h: windowHeight)
 //        spawnWindow(x: width - windowX - windowWidth, y: windowY, w: windowWidth, h: windowHeight)
 //        spawnWindow(x: width - windowX - windowWidth, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
 //        spawnWindow(x: windowX, y: height - windowHeight - windowY, w: windowWidth, h: windowHeight)
@@ -167,8 +187,7 @@ final class HPPLaticeGasViewController: CommonViewController {
         
         latticeGas2Image.encode(commandBuffer: commandBuffer, sourceTexture: texture, destinationTexture: lg2img.texture)
         
-        copy.zoomScale = 1.0 / .init(zoomScale)
-        copy.zoomTarget = .init(x: .init(zoomTarget.x), y: .init(zoomTarget.y))
+        updateCopyKernel()
         copy.encode(commandBuffer: commandBuffer, sourceTexture: lg2img.texture, destinationTexture: destinationTexture)
     }
     
@@ -176,7 +195,7 @@ final class HPPLaticeGasViewController: CommonViewController {
 
 final class LatticeGasKernel: UnaryImageKernel {
     override class var kernelName: String {
-        "latticeGas"
+        "hppModel"
     }
 }
 
@@ -186,9 +205,43 @@ final class LaticeGasToImageKernel: UnaryImageKernel {
     }
 }
 
-final class LatticeGasFillKernel: UnaryImageKernel {
+final class LatticeGasFillCircleKernel: UnaryImageKernel {
     override class var kernelName: String {
-        "latticeGasFill"
+        "latticeGasFillCircle"
+    }
+    
+    var percent: Float = 0.5
+    var seed: UInt32 = .random(in: UInt32.min...UInt32.max)
+
+    func encode(
+        commandBuffer: MTLCommandBuffer,
+        destinationTexture: MTLTexture,
+        radius: CGFloat,
+        center: CGPoint
+    ) {
+        let dts = destinationTexture.size
+        let size = MTLSize(
+            width: Int(CGFloat(dts.height) * radius * 2),
+            height: Int(CGFloat(dts.height) * radius * 2),
+            depth: dts.depth
+        )
+        var center = simd_uint2(x: .init(CGFloat(dts.width) * center.x), y: .init(CGFloat(dts.height) * center.y))
+        var radius = UInt32(CGFloat(dts.height) * radius)
+        
+        let encoder = commandBuffer.makeComputeCommandEncoder()!
+        encoder.set(textures: [destinationTexture])
+        encoder.set(value: &seed, index: 0)
+        encoder.set(value: &percent, index: 1)
+        encoder.set(value: &center, index: 2)
+        encoder.set(value: &radius, index: 3)
+        encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
+        encoder.endEncoding()
+    }
+}
+
+final class LatticeGasFillRectKernel: UnaryImageKernel {
+    override class var kernelName: String {
+        "latticeGasFillRect"
     }
     
     var percent: Float = 0.5
@@ -196,13 +249,27 @@ final class LatticeGasFillKernel: UnaryImageKernel {
     
     func encode(
         commandBuffer: MTLCommandBuffer,
-        destinationTexture: MTLTexture
+        destinationTexture: MTLTexture,
+        rect: CGRect
     ) {
+        let dts = destinationTexture.size
+        let size = MTLSize(
+            width: Int(CGFloat(dts.width) * rect.width),
+            height: Int(CGFloat(dts.height) * rect.height),
+            depth: dts.depth
+        )
+        offset = MPSOffset(
+            x: Int(CGFloat(dts.width) * rect.origin.x),
+            y: Int(CGFloat(dts.height) * rect.origin.y),
+            z: 0
+        )
+        var offset = simd_int3(x: Int32(offset.x), y: Int32(offset.y), z: Int32(offset.z))
         let encoder = commandBuffer.makeComputeCommandEncoder()!
         encoder.set(textures: [destinationTexture])
         encoder.set(value: &seed, index: 0)
         encoder.set(value: &percent, index: 1)
-        encoder.dispatch2d(state: pipelineState, size: destinationTexture.size)
+        encoder.set(value: &offset, index: 2)
+        encoder.dispatch2d(state: pipelineState, size: size)
         encoder.endEncoding()
     }
 }

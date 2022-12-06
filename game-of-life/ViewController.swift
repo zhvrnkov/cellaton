@@ -72,6 +72,7 @@ class CommonViewController: UIViewController {
         view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(longPress)))
         view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(pan)))
         view.addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinch)))
+        view.addGestureRecognizer(UIHoverGestureRecognizer(target: self, action: #selector(hover)))
         
         let scrollWheelGesture = UIPanGestureRecognizer(target: self, action: #selector(scrollWheel(gesture:)))
         scrollWheelGesture.allowedScrollTypesMask = .all
@@ -110,6 +111,11 @@ class CommonViewController: UIViewController {
         let actions = [
             UIAction(title: "Fill with randoms", handler: { [weak self] _ in
                 self?.fillArenaWithRandoms()
+            }),
+            UIAction(title: "Reset position", handler: { [weak self] _ in
+                self?.zoomScale = 1.0
+                self?.direction = .init(repeating: 0)
+                self?.zoomTarget = .init(x: 0.5, y: 0.5)
             })
         ]
         let menu = UIMenu(title: "Menu", children: actions)
@@ -224,11 +230,28 @@ class CommonViewController: UIViewController {
     }
     
     @objc private func pinch(gesture: UIPinchGestureRecognizer) {
-        print(#function, gesture.scale)
+        guard gesture.state != .ended else {
+            return
+        }
+        updateZoomScale(zoomIn: gesture.scale > 1.0)
     }
     
+    @objc private func hover(gesture: UIHoverGestureRecognizer) {
+        let location = gesture.location(in: mtkView)
+        updateZoomTarget(location: location)
+    }
+    
+    @objc private func scrollWheel(gesture: UIPanGestureRecognizer) {
+        guard gesture.state != .ended else {
+            return
+        }
+        let delta = gesture.translation(in: view)
+        updateZoomScale(zoomIn: delta.y > 0)
+    }
+
     private(set) var zoomScale: Float = 1.0
     private(set) var zoomTarget = vector_float2(x: 0.5, y: 0.5)
+    private(set) var direction = vector_float2(x: 0.0, y: 0.0)
     
     private func updateZoomScale(zoomIn: Bool) {
         zoomScale += 0.01 * (zoomIn ? 1 : -1)
@@ -236,27 +259,31 @@ class CommonViewController: UIViewController {
     }
     
     private func updateZoomTarget(location: CGPoint) {
-        let size = vector_float2(x: .init(view.bounds.width), y: .init(view.bounds.height))
+        let size = vector_float2(x: .init(mtkView.bounds.width), y: .init(mtkView.bounds.height))
         let location = vector_float2(x: .init(location.x), y: .init(location.y)) / size
-        let direction = normalize(location - zoomTarget)
-        print(direction)
-        zoomTarget += direction * 0.001
-    }
-    
-    @objc private func scrollWheel(gesture: UIPanGestureRecognizer) {
-        guard gesture.state != .ended else {
+        let zoneMeasure: Float = 0.05
+        let zone = zoneMeasure...(1.0 - zoneMeasure)
+        guard (zone.contains(location.x) && zone.contains(location.y)) == false else {
+            self.direction = .init(x: 0.0, y: 0.0)
             return
         }
-//        let delta = gesture.translation(in: view)
-//        let location = gesture.location(in: view)
-//        updateZoomScale(zoomIn: delta.y > 0)
-//        updateZoomTarget(location: location)
+
+        let direction = normalize(location - vector_float2(x: 0.5, y: 0.5))
+        self.direction = direction * 0.01 / pow(zoomScale, zoomScale * zoomScale)
     }
     
     private func arenaLocation(from location: CGPoint) -> CGPoint {
-        var location = location
-        location.x /= mtkView.bounds.width
-        location.y /= mtkView.bounds.height
+        let cameraMatrix = makeCameraMatrix()
+        
+        let uv = vector_float2(x: .init(location.x), y: .init(location.y)) /
+                 vector_float2(x: .init(mtkView.bounds.width), y: .init(mtkView.bounds.height))
+        var xy = fma(uv, .init(repeating: 2), .init(repeating: -1))
+        let xyz = (cameraMatrix * vector_float3(xy, 1))
+        xy.x = xyz.x
+        xy.y = xyz.y
+        let scaledUV = fma(xy, .init(repeating: 0.5), .init(repeating: 0.5))
+
+        var location = CGPoint(x: CGFloat(scaledUV.x), y: CGFloat(scaledUV.y))
         location.x *= .init(arenaSize.width)
         location.y *= .init(arenaSize.height)
         location.x = floor(location.x)
@@ -289,10 +316,16 @@ class CommonViewController: UIViewController {
             encode(commandBuffer: commandBuffer, previousState: tmpTexture, newState: texture)
         }
 
-        copy.zoomScale = 1.0 / .init(zoomScale)
-        copy.zoomTarget = .init(x: .init(zoomTarget.x), y: .init(zoomTarget.y))
+        updateCopyKernel()
         copy.encode(commandBuffer: commandBuffer, sourceTexture: texture, destinationTexture: destinationTexture)
 
+    }
+    
+    func updateCopyKernel() {
+        zoomTarget += direction
+        zoomTarget = simd_clamp(zoomTarget, .zero, .one)
+        
+        copy.cameraMatrix = makeCameraMatrix()
     }
     
     func encode(
@@ -301,6 +334,33 @@ class CommonViewController: UIViewController {
         newState: MTLTexture
     ) {
         
+    }
+    
+    private func makeCameraMatrix() -> matrix_float3x3 {
+        var cameraMatrix: matrix_float3x3 = .init(diagonal: .init(repeating: 1.0))
+        cameraMatrix *= translationMatrix(translation: zoomTarget)
+        cameraMatrix *= scaleMatrix(scale: zoomScale)
+        return cameraMatrix
+    }
+    
+    private func scaleMatrix(scale: Float) -> matrix_float3x3 {
+        var matrix = matrix_float3x3(diagonal: .init(repeating: 1.0))
+        // 1.5 => 0.5
+        // 1.0 => 1.0
+        // 0.5 => 1.5
+        //
+        let scale = max(2 - scale, 0.005)
+        matrix[0][0] = scale * scale
+        matrix[1][1] = scale * scale
+        return matrix
+    }
+    
+    private func translationMatrix(translation: vector_float2) -> matrix_float3x3 {
+        let translation = translation * 2 - 1
+        var matrix = matrix_float3x3(diagonal: .init(repeating: 1.0))
+        matrix[2, 0] = translation.x
+        matrix[2, 1] = translation.y
+        return matrix
     }
 }
 

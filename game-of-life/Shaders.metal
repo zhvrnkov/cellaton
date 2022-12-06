@@ -71,14 +71,13 @@ public:
 
 kernel void copy(texture2d<float, access::sample> source [[ texture(0) ]],
                  texture2d<float, access::write> destination [[ texture(1) ]],
-                 constant const float& zoomScale [[ buffer(0) ]],
-                 constant const float2& zoomTarget [[ buffer(1) ]],
+                 constant const float3x3& cameraMatrix [[ buffer(0) ]],
                  uint2 pos [[ thread_position_in_grid ]]) {
 #warning "can we do read?"
     constexpr sampler s(filter::nearest);
     const float2 uv = float2(pos) / float2(destination.get_width(), destination.get_height());
-    const float2 zoomTargetXY = fma(zoomTarget, 2, -1);
-    const float2 xy = (fma(uv, 2, -1) + zoomTargetXY) * pow(zoomScale, 2);
+    float2 xy = fma(uv, 2, -1);
+    xy = (cameraMatrix * float3(xy, 1)).xy;
     const float2 scaledUV = fma(xy, 0.5, 0.5);
     destination.write(float4(source.sample(s, scaledUV)), pos);
 }
@@ -179,17 +178,23 @@ kernel void copyTexture(texture2d<float, access::read> source,
     destiation.write(pixel, pos);
 }
 
-constant constexpr const uint dirsM = 0b01111;
-constant constexpr const uint wall  = 0b10000;
-constant constexpr const uint top   = 0b01000;
-constant constexpr const uint right = 0b00100;
-constant constexpr const uint bot   = 0b00010;
-constant constexpr const uint left  = 0b00001;
+constant constexpr const uint dirsM = 0b011111111;
+constant constexpr const uint wall  = 0b100000000;
+constant constexpr const uint top   = 0b1000;
+constant constexpr const uint right = 0b0100;
+constant constexpr const uint bot   = 0b0010;
+constant constexpr const uint left  = 0b0001;
+
+constant constexpr const uint topLeft   = 0b10000000;
+constant constexpr const uint topRight  = 0b01000000;
+constant constexpr const uint botRight  = 0b00100000;
+constant constexpr const uint botLeft   = 0b00010000;
+
 constant constexpr const uint metaM = ~dirsM;
 
-kernel void latticeGas(texture2d<uint, access::read> sourceTexture,
-                       texture2d<uint, access::write> destinationTexture,
-                       uint2 pos [[ thread_position_in_grid ]]) {
+kernel void hppModel(texture2d<uint, access::read> sourceTexture,
+                     texture2d<uint, access::write> destinationTexture,
+                     uint2 pos [[ thread_position_in_grid ]]) {
     const uint source = sourceTexture.read(pos).r;
     const uint meta = source & metaM;
     const bool isWall = meta == wall;
@@ -236,16 +241,53 @@ kernel void latticeGas(texture2d<uint, access::read> sourceTexture,
     destinationTexture.write(value, pos);
 }
 
-kernel void latticeGasFill(texture2d<uint, access::write> destinationTexture,
-                           constant const uint& seed,
-                           constant const float& percent,
-                           uint2 pos [[ thread_position_in_grid ]]) {
+kernel void particles(texture2d<uint, access::read> sourceTexture,
+                      texture2d<uint, access::write> destinationTexture,
+                      constant const uint& seed,
+                      uint2 pos [[ thread_position_in_grid ]]) {
+    Loki rnd = Loki(pos.x + 1, pos.y + 1, seed);
+    const auto number = rnd.rand();
+    
+    const uint ftop = sourceTexture.read(pos - uint2(0, 1)).r & bot;
+    const uint fright = sourceTexture.read(pos + uint2(1, 0)).r & left;
+    const uint fbot = sourceTexture.read(pos + uint2(0, 1)).r & top;
+    const uint fleft = sourceTexture.read(pos - uint2(1, 0)).r & right;
+    const uint ftopleft = sourceTexture.read(pos - uint2(1, 1)).r & botRight;
+    const uint ftopright = sourceTexture.read(pos + uint2(1, 0) - uint2(0, 1)).r & botLeft;
+    const uint fbotright = sourceTexture.read(pos + uint2(1, 1)).r & topLeft;
+    const uint fbotleft = sourceTexture.read(pos - uint2(1, 0) + uint2(0, 1)).r & topRight;
+}
+
+kernel void latticeGasFillRect(texture2d<uint, access::write> destinationTexture,
+                               constant const uint& seed,
+                               constant const float& percent,
+                               constant const int3& offset,
+                               uint2 gpos [[ thread_position_in_grid ]]) {
+    uint2 pos = gpos + uint2(offset.xy);
     constexpr const uint dirs[4] = { top, right, bot, left };
     Loki rnd = Loki(pos.x + 1, pos.y + 1, seed);
     const auto number = rnd.rand();
     const auto index = int(round(number * 100));
     
     destinationTexture.write(number < percent ? dirs[index % 4] : 0, pos);
+}
+
+kernel void latticeGasFillCircle(texture2d<uint, access::write> destinationTexture,
+                                 constant const uint& seed,
+                                 constant const float& percent,
+                                 constant const uint2& center,
+                                 constant const uint& radius,
+                                 uint2 pos [[ thread_position_in_grid ]]) {
+    constexpr const uint dirs[4] = { top, right, bot, left };
+    Loki rnd = Loki(pos.x + 1, pos.y + 1, seed);
+    const auto number = rnd.rand();
+    const auto index = int(round(number * 100));
+    
+    const auto d = uint(distance(float2(center), float2(pos)));
+    const bool isCircle = d <= radius;
+    
+    if (isCircle)
+        destinationTexture.write(number < percent ? dirs[index % 4] : 0, pos);
 }
 
 kernel void latticeGasToImage(texture2d<uint, access::read> gasTexture,
