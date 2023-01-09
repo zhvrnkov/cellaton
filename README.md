@@ -1,3 +1,24 @@
+# Cellaton
+[x] - Rule 110
+[x] - Rule 90
+[x] - Rule 30
+[x] - Convay game of life
+[x] - Seeds
+[x] - Brian's Brain
+[x] - Wire World
+[x] - Langton's ant
+[x] - HPP Latice Gas model
+
+Rules are done with single algorithm.
+
+Convay, seeds, Brian's Brain and Wire World are also done with single algorithm.
+
+Wire World is done by writing pixels to texture directly.
+
+HPP Latice Gas Model is done with custom kernel that encodes lattice into single texture and uses "convolution-like" algorithm to determine cell behavior.
+
+----------------------------------------------
+
 # Links
 https://github.com/Chakazul/Lenia app from some youtube video about smooth game of life
 
@@ -13,8 +34,9 @@ http://www.radicaleye.com/lifepage/picgloss/picgloss.html list of Convay's gol p
 
 # TODO
 [x] - wire world https://en.wikipedia.org/wiki/Wireworld
-[ ] - gasatomato://en.wikipedia.org/wiki/Lattice_gas_automaton 
+[x] - gasatomato://en.wikipedia.org/wiki/Lattice_gas_automaton 
 [x] - ant https://en.wikipedia.org/wiki/Langton%27s_ant
+[ ] - LBM https://en.wikipedia.org/wiki/Lattice_Boltzmann_methods
 [ ] - smooth gol https://www.youtube.com/watch?v=8wDSQxmAyTw&ab_channel=NeatAI
 [ ] - 3d cellular automaton https://www.youtube.com/watch?v=dQJ5aEsP6Fs&ab_channel=Softology
 [ ] - Ulam's two step https://dmackinnon1.github.io/svgpixel/ulam.html
