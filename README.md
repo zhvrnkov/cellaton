@@ -1,13 +1,14 @@
 # Cellaton
-[x] - Rule 110
-[x] - Rule 90
-[x] - Rule 30
-[x] - Convay game of life
-[x] - Seeds
-[x] - Brian's Brain
-[x] - Wire World
-[x] - Langton's ant
-[x] - HPP Latice Gas model
+
+- [x] Rule 110
+- [x] Rule 90
+- [x] Rule 30
+- [x] Convay game of life
+- [x] Seeds
+- [x] Brian's Brain
+- [x] Wire World
+- [x] Langton's ant
+- [x] HPP Latice Gas model
 
 Rules are done with single algorithm.
 
@@ -33,13 +34,13 @@ https://conwaylife.com/wiki/List_of_Life-like_cellular_automata
 http://www.radicaleye.com/lifepage/picgloss/picgloss.html list of Convay's gol patterns
 
 # TODO
-[x] - wire world https://en.wikipedia.org/wiki/Wireworld
-[x] - gasatomato://en.wikipedia.org/wiki/Lattice_gas_automaton 
-[x] - ant https://en.wikipedia.org/wiki/Langton%27s_ant
-[ ] - LBM https://en.wikipedia.org/wiki/Lattice_Boltzmann_methods
-[ ] - smooth gol https://www.youtube.com/watch?v=8wDSQxmAyTw&ab_channel=NeatAI
-[ ] - 3d cellular automaton https://www.youtube.com/watch?v=dQJ5aEsP6Fs&ab_channel=Softology
-[ ] - Ulam's two step https://dmackinnon1.github.io/svgpixel/ulam.html
+- [x] wire world https://en.wikipedia.org/wiki/Wireworld
+- [x] gasatomato://en.wikipedia.org/wiki/Lattice_gas_automaton 
+- [x] ant https://en.wikipedia.org/wiki/Langton%27s_ant
+- [ ] LBM https://en.wikipedia.org/wiki/Lattice_Boltzmann_methods
+- [ ] smooth gol https://www.youtube.com/watch?v=8wDSQxmAyTw&ab_channel=NeatAI
+- [ ] 3d cellular automaton https://www.youtube.com/watch?v=dQJ5aEsP6Fs&ab_channel=Softology
+- [ ] Ulam's two step https://dmackinnon1.github.io/svgpixel/ulam.html
 
 # lattice gas automaton
 use rgba texture
