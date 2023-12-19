@@ -27,6 +27,9 @@ class CommonViewController: UIViewController {
         .init(width: 128, height: 128)
     }
     
+    var isHoverEnabled: Bool = true
+    var isZoomEnabled: Bool = true
+
     var shouldPreserveSquareCells: Bool {
         return true
     }
@@ -37,7 +40,7 @@ class CommonViewController: UIViewController {
     }
     
     var texturePixelFormat: MTLPixelFormat {
-        .rgba8Unorm
+        .r8Unorm
     }
     
     private lazy var arenaSize: (width: Int, height: Int) = {
@@ -60,14 +63,15 @@ class CommonViewController: UIViewController {
     }()
     
     private(set) lazy var context = try! MTLContext()
-    private lazy var mtkView: MTKView = {
+    lazy var mtkView: MTKView = {
         let view = MTKView()
         view.clearColor = .init(red: 0, green: 1.0, blue: 0, alpha: 1.0)
         view.device = context.device
         view.delegate = self
         view.framebufferOnly = false
         view.preferredFramesPerSecond = preferredFPS
-        
+        view.autoResizeDrawable = false
+
         view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tap)))
         view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(longPress)))
         view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(pan)))
@@ -92,7 +96,7 @@ class CommonViewController: UIViewController {
         isGamePaused ? pausedFPS : inProgressFPS
     }
     
-    private(set) var isGamePaused = true {
+    var isGamePaused = true {
         didSet {
             mtkView.preferredFramesPerSecond = preferredFPS
             title = titleText
@@ -139,8 +143,8 @@ class CommonViewController: UIViewController {
             height: height,
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
         )
         cgContext.scaleBy(x: 1.0, y: -1.0)
         cgContext.translateBy(x: 0, y: -CGFloat(cgContext.height))
@@ -167,6 +171,8 @@ class CommonViewController: UIViewController {
             offset: 0,
             bytesPerRow: cgContext.bytesPerRow
         )
+
+        mtkView.drawableSize = CGSize(width: texture.width, height: texture.height)
     }
     
     func fill(cgContext: CGContext, dataSize: Int) {
@@ -237,11 +243,17 @@ class CommonViewController: UIViewController {
     }
     
     @objc private func hover(gesture: UIHoverGestureRecognizer) {
+        guard isHoverEnabled else {
+            return
+        }
         let location = gesture.location(in: mtkView)
         updateZoomTarget(location: location)
     }
     
     @objc private func scrollWheel(gesture: UIPanGestureRecognizer) {
+        guard isZoomEnabled else {
+            return
+        }
         guard gesture.state != .ended else {
             return
         }
@@ -291,10 +303,17 @@ class CommonViewController: UIViewController {
         return location
     }
     
-    private func fillArenaWithRandoms() {
-        for x in 0..<arenaSize.width {
-            for y in 0..<arenaSize.height {
-                cgContext.setFillColor(colors.randomElement()!)
+    func fillArenaWithRandoms() {
+        let width = Int(Double(arenaSize.width) * 0.5)
+        let height = Int(Double(arenaSize.height) * 0.5)
+        let startX = arenaSize.width / 2 - width / 2
+        let startY = arenaSize.height / 2 - height / 2
+
+        for y in startY..<startY + height {
+            for x in startX..<startX + width {
+//                cgContext.setFillColor(colors.randomElement()!)
+                cgContext.setFillColor(gray: CGFloat.random(in: 0...1), alpha: 1.0)
+//                cgContext.setFillColor(gray: 1, alpha: 1.0)
                 cgContext.fill(CGRect(origin: .init(x: x, y: y), size: .init(width: 1, height: 1)))
             }
         }

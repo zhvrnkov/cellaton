@@ -76,10 +76,11 @@ kernel void copy(texture2d<float, access::sample> source [[ texture(0) ]],
 #warning "can we do read?"
     constexpr sampler s(filter::nearest);
     const float2 uv = float2(pos) / float2(destination.get_width(), destination.get_height());
-    float2 xy = fma(uv, 2, -1);
-    xy = (cameraMatrix * float3(xy, 1)).xy;
-    const float2 scaledUV = fma(xy, 0.5, 0.5);
-    destination.write(float4(source.sample(s, scaledUV)), pos);
+//    float2 xy = fma(uv, 2, -1);
+//    xy = (cameraMatrix * float3(xy, 1)).xy;
+//    const float2 scaledUV = fma(xy, 0.5, 0.5);
+    const float2 scaledUV = uv;
+    destination.write(float4(source.sample(s, scaledUV).r), pos);
 }
 
 kernel void fill(texture2d<float, access::write> destination [[ texture(0) ]],
@@ -327,3 +328,111 @@ kernel void latticeGasToImage(texture2d<uint, access::read> gasTexture,
 //    const float3 value = isLive ? color : (isWall ? float3(1.0, 1.0, 0) : 0);
 //    destinationTexture.write(float4(float3(value), 1.0), pos);
 //}
+
+constant constexpr float ra = 11.0;
+constant constexpr float ri = ra / 3.0;
+constant constexpr float dt = 1.0; // / 60.0;
+
+#if 0
+constant constexpr float alphaN = 0.128;
+constant constexpr float alphaM = 0.147;
+constant constexpr float b1 = 0.257;
+constant constexpr float b2 = 0.336;
+constant constexpr float d1 = 0.365;
+constant constexpr float d2 = 0.549;
+#else
+constant constexpr float alphaN = 0.028;
+constant constexpr float alphaM = 0.147;
+constant constexpr float b1 = 0.278;
+constant constexpr float b2 = 0.365;
+constant constexpr float d1 = 0.267;
+constant constexpr float d2 = 0.445;
+#endif
+
+//template<typename T>
+//METAL_FUNC T sigma1(T x, T a, T alpha) {
+//    return 1.0 / (1.0 + exp(-(x - a) * 4.0 / alpha));
+//}
+//
+//template<typename T>
+//METAL_FUNC T sigma2(T x, T a, T b, T alpha) {
+//    return sigma1(x, a, alpha) * (1.0 - sigma1(x, b, alpha));
+//}
+//
+//template<typename T>
+//METAL_FUNC T sigmaM(T x, T y, T m) {
+//    float s1 = sigma1(m, 0.5, alphaM);
+//    return x * (1.0 - s1) + y * s1;
+//}
+//
+//template<typename T>
+//METAL_FUNC T s(T n, T m) {
+//    return sigma2(n, sigmaM(b1, d1, m), sigmaM(b2, d2, m), alphaN);
+//}
+float sigma(float x, float a, float alpha)
+{
+    return 1.0/(1.0 + exp(-(x - a)*4.0/alpha));
+}
+
+float sigma_n(float x, float a, float b)
+{
+    return sigma(x, a, alphaN)*(1.0 - sigma(x, b, alphaN));
+}
+
+float sigma_m(float x, float y, float m)
+{
+    return x*(1 - sigma(m, 0.5, alphaM)) + y*sigma(m, 0.5, alphaM);
+}
+
+float s(float n, float m)
+{
+    return sigma_n(n, sigma_m(b1, d1, m), sigma_m(b2, d2, m));
+}
+
+kernel void smoothlife(
+                       texture2d<float, access::read> previousState,
+                       texture2d<float, access::write> newState,
+                       uint2 tpg [[ thread_position_in_grid ]]
+                       )
+{
+    const int2 size = int2(previousState.get_width(), previousState.get_height());
+
+    const int2 itpg = int2(tpg);
+    float n = 0;
+    float M = M_PI_F * ri * ri;
+    float N = M_PI_F * ra * ra - M;
+    float m = 0;
+    for (int dy = -ra; dy <= ra; dy++) {
+        for (int dx = -ra; dx <= ra; dx++) {
+            const int2 p = (itpg + int2(dx, dy) + size) % size;
+            const float ls = length_squared(float2(dx, dy));
+            if (ls < (ri * ri)) {
+                m += previousState.read(uint2(p)).r;
+            } else if (ls < (ra * ra)) {
+                n += previousState.read(uint2(p)).r;
+            }
+        }
+    }
+    n /= N;
+    m /= M;
+
+    const float transition = fma(s(n, m), 2.0, -1.0);
+    const float value = clamp(previousState.read(tpg).r + transition * dt, 0.0, 1.0);
+    newState.write(float4(value), tpg);
+}
+
+kernel void smoothlife2(
+                        texture2d<float, access::read> previousState,
+                        texture2d<float, access::read> bigRadiusBlur,
+                        texture2d<float, access::read> smallRadiusBlur,
+                        texture2d<float, access::write> newState,
+                        uint2 tpg [[ thread_position_in_grid]]
+                        )
+{
+    float m = smallRadiusBlur.read(tpg).r;
+    float n = bigRadiusBlur.read(tpg).r - m * 0.25;
+
+    const float transition = fma(s(n, m), 2.0, -1.0);
+    const float value = clamp(previousState.read(tpg).r + transition * dt, 0.0, 1.0);
+    newState.write(float4(value), tpg);
+}

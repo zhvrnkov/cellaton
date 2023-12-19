@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		368B364E2B0E209B00B96BA8 /* SmoothLifeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368B364D2B0E209B00B96BA8 /* SmoothLifeViewController.swift */; };
 		AD295C922924111700D79B1C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD295C912924111700D79B1C /* AppDelegate.swift */; };
 		AD295C962924111700D79B1C /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD295C952924111700D79B1C /* ViewController.swift */; };
 		AD295C9B2924111800D79B1C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AD295C9A2924111800D79B1C /* Assets.xcassets */; };
@@ -26,6 +27,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		368B364D2B0E209B00B96BA8 /* SmoothLifeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmoothLifeViewController.swift; sourceTree = "<group>"; };
 		AD295C8E2924111700D79B1C /* game-of-life.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "game-of-life.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD295C912924111700D79B1C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AD295C952924111700D79B1C /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -95,6 +97,7 @@
 				AD812EA92927D08800C2F028 /* GameOfLifeSetup.swift */,
 				AD812EAC2929209C00C2F028 /* HPPLatticeGasViewController.swift */,
 				AD812EAE292920AC00C2F028 /* LangtonAntViewController.swift */,
+				368B364D2B0E209B00B96BA8 /* SmoothLifeViewController.swift */,
 			);
 			path = "game-of-life";
 			sourceTree = "<group>";
@@ -180,6 +183,7 @@
 				AD295C922924111700D79B1C /* AppDelegate.swift in Sources */,
 				AD812EAA2927D08800C2F028 /* GameOfLifeSetup.swift in Sources */,
 				AD295CA8292411A500D79B1C /* Shaders.metal in Sources */,
+				368B364E2B0E209B00B96BA8 /* SmoothLifeViewController.swift in Sources */,
 				AD812E9E29267EAE00C2F028 /* GameOfLifeViewController.swift in Sources */,
 				AD812EAF292920AC00C2F028 /* LangtonAntViewController.swift in Sources */,
 				AD812EA2292680DF00C2F028 /* RuleViewController.swift in Sources */,

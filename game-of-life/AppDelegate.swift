@@ -21,6 +21,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             Rule90ViewController.self,
             Rule30ViewController.self,
             ConvayViewController.self,
+            SmoothLifeViewController.self,
             SeedsViewController.self,
             BriansBrainViewController.self,
             WireWorldViewController.self,
@@ -28,7 +29,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             HPPLaticeGasViewController.self
         ])
         let navigationController = UINavigationController(rootViewController: menu)
-        navigationController.pushViewController(WireWorldViewController(), animated: false)
+        navigationController.pushViewController(SmoothLifeViewController(), animated: false)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
         return true
